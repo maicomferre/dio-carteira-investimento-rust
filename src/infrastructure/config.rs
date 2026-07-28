@@ -50,6 +50,12 @@ pub struct AuthConfig {
     pub login_rate_limit_max_attempts: u32,
     pub login_rate_limit_window_seconds: u64,
     pub login_rate_limit_block_seconds: u64,
+    pub register_rate_limit_max_requests: u32,
+    pub register_rate_limit_window_seconds: u64,
+    pub register_rate_limit_block_seconds: u64,
+    pub mutation_rate_limit_max_requests: u32,
+    pub mutation_rate_limit_window_seconds: u64,
+    pub mutation_rate_limit_block_seconds: u64,
     pub expired_session_retention_days: i64,
 }
 
@@ -120,6 +126,36 @@ impl AppConfig {
         if !(30..=86_400).contains(&login_rate_limit_block_seconds) {
             bail!("AUTH_LOGIN_RATE_LIMIT_BLOCK_SECONDS deve ficar entre 30 e 86400");
         }
+        let register_rate_limit_max_requests =
+            read_env_parse("AUTH_REGISTER_RATE_LIMIT_MAX_REQUESTS", 3)?;
+        if !(1..=20).contains(&register_rate_limit_max_requests) {
+            bail!("AUTH_REGISTER_RATE_LIMIT_MAX_REQUESTS deve ficar entre 1 e 20");
+        }
+        let register_rate_limit_window_seconds =
+            read_env_parse("AUTH_REGISTER_RATE_LIMIT_WINDOW_SECONDS", 300)?;
+        if !(30..=3_600).contains(&register_rate_limit_window_seconds) {
+            bail!("AUTH_REGISTER_RATE_LIMIT_WINDOW_SECONDS deve ficar entre 30 e 3600");
+        }
+        let register_rate_limit_block_seconds =
+            read_env_parse("AUTH_REGISTER_RATE_LIMIT_BLOCK_SECONDS", 900)?;
+        if !(30..=86_400).contains(&register_rate_limit_block_seconds) {
+            bail!("AUTH_REGISTER_RATE_LIMIT_BLOCK_SECONDS deve ficar entre 30 e 86400");
+        }
+        let mutation_rate_limit_max_requests =
+            read_env_parse("AUTH_MUTATION_RATE_LIMIT_MAX_REQUESTS", 60)?;
+        if !(1..=600).contains(&mutation_rate_limit_max_requests) {
+            bail!("AUTH_MUTATION_RATE_LIMIT_MAX_REQUESTS deve ficar entre 1 e 600");
+        }
+        let mutation_rate_limit_window_seconds =
+            read_env_parse("AUTH_MUTATION_RATE_LIMIT_WINDOW_SECONDS", 60)?;
+        if !(10..=3_600).contains(&mutation_rate_limit_window_seconds) {
+            bail!("AUTH_MUTATION_RATE_LIMIT_WINDOW_SECONDS deve ficar entre 10 e 3600");
+        }
+        let mutation_rate_limit_block_seconds =
+            read_env_parse("AUTH_MUTATION_RATE_LIMIT_BLOCK_SECONDS", 300)?;
+        if !(30..=86_400).contains(&mutation_rate_limit_block_seconds) {
+            bail!("AUTH_MUTATION_RATE_LIMIT_BLOCK_SECONDS deve ficar entre 30 e 86400");
+        }
         let expired_session_retention_days =
             read_env_parse("AUTH_EXPIRED_SESSION_RETENTION_DAYS", 7)?;
         if !(1..=365).contains(&expired_session_retention_days) {
@@ -173,6 +209,12 @@ impl AppConfig {
                 login_rate_limit_max_attempts,
                 login_rate_limit_window_seconds,
                 login_rate_limit_block_seconds,
+                register_rate_limit_max_requests,
+                register_rate_limit_window_seconds,
+                register_rate_limit_block_seconds,
+                mutation_rate_limit_max_requests,
+                mutation_rate_limit_window_seconds,
+                mutation_rate_limit_block_seconds,
                 expired_session_retention_days,
             },
             instrument_provider: InstrumentProviderConfig {

@@ -37,6 +37,12 @@ Top 10:2025, além de resiliência a abuso e falhas externas.
 
 - [ ] Limitar tamanho de headers/body, duração, conexões, concorrência e pool.
 - [ ] Configurar rate limits separados para global, login, registro e mutações.
+  - [x] Login: limite por IP + usuário normalizado, com atraso progressivo em
+    falhas e bloqueio temporário.
+  - [x] Registro: limite por IP antes de acessar o banco.
+  - [x] Mutações de carteira: limite por IP antes de CSRF/autorização nas rotas
+    `POST`/`PATCH` de corretoras, ativos e movimentações.
+  - [ ] Global: definir se fica no proxy reverso, middleware Axum ou ambos.
 - [ ] Testar slow requests no proxy e saturação controlada da aplicação/DB.
 - [x] Aplicar CSP, HSTS no perfil HTTPS, nosniff, referrer/frame policy e
   `Cache-Control: no-store` em conteúdo autenticado.

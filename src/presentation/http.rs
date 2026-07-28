@@ -42,7 +42,7 @@ use crate::{
         config::AuthConfig,
         instrument_provider::{CachedInstrumentProvider, InstrumentProviderConfig},
         portfolio_repository::PortfolioRepository,
-        security::LoginRateLimiter,
+        security::{IpRateLimiter, LoginRateLimiter},
     },
 };
 
@@ -51,6 +51,8 @@ const MAX_BODY_BYTES: usize = 1024 * 1024;
 const SESSION_COOKIE_NAME: &str = "investment_session";
 const CSRF_COOKIE_NAME: &str = "investment_csrf";
 const CSRF_HEADER_NAME: &str = "x-csrf-token";
+const REGISTER_RATE_LIMIT_SCOPE: &str = "register";
+const MUTATION_RATE_LIMIT_SCOPE: &str = "portfolio_mutation";
 const CSP_POLICY: &str = concat!(
     "default-src 'self'; ",
     "base-uri 'self'; ",
@@ -69,6 +71,8 @@ pub struct AppState {
     pub pool: PgPool,
     pub auth: AuthConfig,
     pub login_rate_limiter: LoginRateLimiter,
+    pub register_rate_limiter: IpRateLimiter,
+    pub mutation_rate_limiter: IpRateLimiter,
     pub instrument_provider: CachedInstrumentProvider,
 }
 
@@ -287,6 +291,16 @@ pub fn build_router(
         Duration::from_secs(auth.login_rate_limit_window_seconds),
         Duration::from_secs(auth.login_rate_limit_block_seconds),
     );
+    let register_rate_limiter = IpRateLimiter::new(
+        auth.register_rate_limit_max_requests,
+        Duration::from_secs(auth.register_rate_limit_window_seconds),
+        Duration::from_secs(auth.register_rate_limit_block_seconds),
+    );
+    let mutation_rate_limiter = IpRateLimiter::new(
+        auth.mutation_rate_limit_max_requests,
+        Duration::from_secs(auth.mutation_rate_limit_window_seconds),
+        Duration::from_secs(auth.mutation_rate_limit_block_seconds),
+    );
 
     Router::new()
         .route("/", get(root))
@@ -318,6 +332,8 @@ pub fn build_router(
             pool,
             auth,
             login_rate_limiter,
+            register_rate_limiter,
+            mutation_rate_limiter,
             instrument_provider: CachedInstrumentProvider::new(instrument_provider_config),
         })
         .layer(PropagateRequestIdLayer::new(request_id_header.clone()))
@@ -436,6 +452,8 @@ async fn register_form(
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
     Form(payload): Form<AuthRequest>,
 ) -> Result<Response, AppError> {
+    apply_register_rate_limit(&state, addr).await?;
+
     let repository = AuthRepository::new(state.pool.clone());
     auth::register_user(
         &repository,
@@ -490,8 +508,11 @@ async fn readiness(State(state): State<AppState>) -> Result<Json<HealthStatus>, 
 
 async fn register(
     State(state): State<AppState>,
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
     Json(payload): Json<AuthRequest>,
 ) -> Result<(StatusCode, Json<AuthUserResponse>), AppError> {
+    apply_register_rate_limit(&state, addr).await?;
+
     let repository = AuthRepository::new(state.pool.clone());
     let user = auth::register_user(&repository, payload.username, payload.password).await?;
 
@@ -575,6 +596,20 @@ async fn issue_login_session(
     })
 }
 
+async fn apply_register_rate_limit(state: &AppState, addr: SocketAddr) -> Result<(), AppError> {
+    state
+        .register_rate_limiter
+        .check_and_record(addr.ip(), REGISTER_RATE_LIMIT_SCOPE)
+        .await
+}
+
+async fn apply_mutation_rate_limit(state: &AppState, addr: SocketAddr) -> Result<(), AppError> {
+    state
+        .mutation_rate_limiter
+        .check_and_record(addr.ip(), MUTATION_RATE_LIMIT_SCOPE)
+        .await
+}
+
 async fn me(
     State(state): State<AppState>,
     headers: HeaderMap,
@@ -620,9 +655,11 @@ async fn list_brokers(
 
 async fn create_broker(
     State(state): State<AppState>,
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
     headers: HeaderMap,
     Json(payload): Json<CreateBrokerRequest>,
 ) -> Result<(StatusCode, Json<PublicBroker>), AppError> {
+    apply_mutation_rate_limit(&state, addr).await?;
     validate_csrf(&headers, &state.auth)?;
     let user = authenticated_user(&state, &headers).await?;
     let repository = PortfolioRepository::new(state.pool);
@@ -633,10 +670,12 @@ async fn create_broker(
 
 async fn update_broker(
     State(state): State<AppState>,
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
     headers: HeaderMap,
     Path(broker_id): Path<Uuid>,
     Json(payload): Json<UpdateBrokerRequest>,
 ) -> Result<Json<PublicBroker>, AppError> {
+    apply_mutation_rate_limit(&state, addr).await?;
     validate_csrf(&headers, &state.auth)?;
     let user = authenticated_user(&state, &headers).await?;
     let repository = PortfolioRepository::new(state.pool);
@@ -656,9 +695,11 @@ async fn update_broker(
 
 async fn archive_broker(
     State(state): State<AppState>,
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
     headers: HeaderMap,
     Path(broker_id): Path<Uuid>,
 ) -> Result<StatusCode, AppError> {
+    apply_mutation_rate_limit(&state, addr).await?;
     validate_csrf(&headers, &state.auth)?;
     let user = authenticated_user(&state, &headers).await?;
     let repository = PortfolioRepository::new(state.pool);
@@ -680,9 +721,11 @@ async fn list_assets(
 
 async fn create_asset(
     State(state): State<AppState>,
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
     headers: HeaderMap,
     Json(payload): Json<CreateAssetRequest>,
 ) -> Result<(StatusCode, Json<PublicAsset>), AppError> {
+    apply_mutation_rate_limit(&state, addr).await?;
     validate_csrf(&headers, &state.auth)?;
     let user = authenticated_user(&state, &headers).await?;
     let repository = PortfolioRepository::new(state.pool);
@@ -705,10 +748,12 @@ async fn create_asset(
 
 async fn update_asset(
     State(state): State<AppState>,
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
     headers: HeaderMap,
     Path(asset_id): Path<Uuid>,
     Json(payload): Json<UpdateAssetRequest>,
 ) -> Result<Json<PublicAsset>, AppError> {
+    apply_mutation_rate_limit(&state, addr).await?;
     validate_csrf(&headers, &state.auth)?;
     let user = authenticated_user(&state, &headers).await?;
     let repository = PortfolioRepository::new(state.pool);
@@ -755,17 +800,21 @@ async fn list_transactions(
 
 async fn record_purchase(
     State(state): State<AppState>,
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
     headers: HeaderMap,
     Json(payload): Json<CreateTransactionRequest>,
 ) -> Result<(StatusCode, Json<PublicTransaction>), AppError> {
+    apply_mutation_rate_limit(&state, addr).await?;
     record_transaction(state, headers, payload, TransactionType::Buy).await
 }
 
 async fn record_sale(
     State(state): State<AppState>,
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
     headers: HeaderMap,
     Json(payload): Json<CreateTransactionRequest>,
 ) -> Result<(StatusCode, Json<PublicTransaction>), AppError> {
+    apply_mutation_rate_limit(&state, addr).await?;
     record_transaction(state, headers, payload, TransactionType::Sell).await
 }
 
@@ -1146,6 +1195,12 @@ mod tests {
             login_rate_limit_max_attempts: 5,
             login_rate_limit_window_seconds: 300,
             login_rate_limit_block_seconds: 900,
+            register_rate_limit_max_requests: 3,
+            register_rate_limit_window_seconds: 300,
+            register_rate_limit_block_seconds: 900,
+            mutation_rate_limit_max_requests: 60,
+            mutation_rate_limit_window_seconds: 60,
+            mutation_rate_limit_block_seconds: 300,
             expired_session_retention_days: 7,
         }
     }

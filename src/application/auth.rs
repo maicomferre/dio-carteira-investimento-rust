@@ -242,6 +242,12 @@ mod tests {
             login_rate_limit_max_attempts: 5,
             login_rate_limit_window_seconds: 300,
             login_rate_limit_block_seconds: 900,
+            register_rate_limit_max_requests: 3,
+            register_rate_limit_window_seconds: 300,
+            register_rate_limit_block_seconds: 900,
+            mutation_rate_limit_max_requests: 60,
+            mutation_rate_limit_window_seconds: 60,
+            mutation_rate_limit_block_seconds: 300,
             expired_session_retention_days: 7,
         }
     }
