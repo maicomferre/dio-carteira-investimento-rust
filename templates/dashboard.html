@@ -17,7 +17,8 @@
           <a class="btn btn-outline-primary btn-sm" href="/dashboard"><i class="bi bi-speedometer2"></i> Dashboard</a>
           <button class="btn btn-primary btn-sm" type="button"><i class="bi bi-plus-circle"></i> Registrar movimentação</button>
           <span class="user-avatar" aria-label="Usuário {{ user.username }}">{{ user.initials }}</span>
-          <form method="post" action="/auth/logout" data-logout-form>
+          <form method="post" action="/logout" data-logout-form>
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
             <button class="btn btn-outline-secondary btn-sm" type="submit">Sair</button>
           </form>
         </div>

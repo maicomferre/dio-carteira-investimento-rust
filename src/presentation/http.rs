@@ -2,7 +2,7 @@ use std::{net::SocketAddr, time::Duration};
 
 use askama::Template;
 use axum::{
-    Json, Router,
+    Form, Json, Router,
     extract::{ConnectInfo, Path, Query, State},
     http::{HeaderMap, HeaderName, HeaderValue, StatusCode, header},
     response::{Html, IntoResponse, Redirect, Response},
@@ -76,6 +76,11 @@ struct AuthRequest {
     password: String,
 }
 
+#[derive(Debug, serde::Deserialize)]
+struct LogoutForm {
+    csrf_token: String,
+}
+
 #[derive(Debug, Serialize)]
 struct AuthUserResponse {
     user: PublicUser,
@@ -85,6 +90,13 @@ struct AuthUserResponse {
 struct LoginResponse {
     user: PublicUser,
     csrf_token: String,
+}
+
+struct IssuedSession {
+    user: PublicUser,
+    csrf_token: String,
+    session_cookie: HeaderValue,
+    csrf_cookie: HeaderValue,
 }
 
 #[derive(Debug, serde::Deserialize)]
@@ -163,6 +175,7 @@ struct RegisterTemplate;
 #[template(path = "dashboard.html")]
 struct DashboardTemplate {
     user: PageUser,
+    csrf_token: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -243,8 +256,9 @@ pub fn build_router(
 
     Router::new()
         .route("/", get(root))
-        .route("/login", get(login_page))
-        .route("/register", get(register_page))
+        .route("/login", get(login_page).post(login_form))
+        .route("/register", get(register_page).post(register_form))
+        .route("/logout", post(logout_form))
         .route("/dashboard", get(dashboard_page))
         .route("/health/live", get(liveness))
         .route("/health/ready", get(readiness))
@@ -308,8 +322,69 @@ async fn dashboard_page(
             initials: username_initials(&user.username),
             username: user.username,
         },
+        csrf_token: extract_cookie(&headers, CSRF_COOKIE_NAME)
+            .unwrap_or_default()
+            .to_owned(),
     })?
     .into_response())
+}
+
+async fn login_form(
+    State(state): State<AppState>,
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+    Form(payload): Form<AuthRequest>,
+) -> Result<Response, AppError> {
+    let issued = issue_login_session(&state, addr, payload).await?;
+    let mut response = Redirect::to("/dashboard").into_response();
+    response
+        .headers_mut()
+        .append(header::SET_COOKIE, issued.session_cookie);
+    response
+        .headers_mut()
+        .append(header::SET_COOKIE, issued.csrf_cookie);
+
+    Ok(response)
+}
+
+async fn register_form(
+    State(state): State<AppState>,
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+    Form(payload): Form<AuthRequest>,
+) -> Result<Response, AppError> {
+    let repository = AuthRepository::new(state.pool.clone());
+    auth::register_user(
+        &repository,
+        payload.username.clone(),
+        payload.password.clone(),
+    )
+    .await?;
+
+    login_form(State(state), ConnectInfo(addr), Form(payload)).await
+}
+
+async fn logout_form(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Form(payload): Form<LogoutForm>,
+) -> Result<Response, AppError> {
+    validate_csrf_value(&headers, &state.auth, &payload.csrf_token)?;
+
+    let token = extract_session_cookie(&headers)?;
+    let repository = AuthRepository::new(state.pool.clone());
+
+    auth::logout_user(&repository, &state.auth, token).await?;
+
+    let mut response = Redirect::to("/login").into_response();
+    response.headers_mut().insert(
+        header::SET_COOKIE,
+        build_clear_session_cookie(state.auth.cookie_secure)?,
+    );
+    response.headers_mut().append(
+        header::SET_COOKIE,
+        build_clear_csrf_cookie(state.auth.cookie_secure)?,
+    );
+
+    Ok(response)
 }
 
 async fn liveness() -> Json<HealthStatus> {
@@ -332,7 +407,7 @@ async fn register(
     State(state): State<AppState>,
     Json(payload): Json<AuthRequest>,
 ) -> Result<(StatusCode, Json<AuthUserResponse>), AppError> {
-    let repository = AuthRepository::new(state.pool);
+    let repository = AuthRepository::new(state.pool.clone());
     let user = auth::register_user(&repository, payload.username, payload.password).await?;
 
     Ok((StatusCode::CREATED, Json(AuthUserResponse { user })))
@@ -343,13 +418,35 @@ async fn login(
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
     Json(payload): Json<AuthRequest>,
 ) -> Result<Response, AppError> {
+    let issued = issue_login_session(&state, addr, payload).await?;
+
+    let mut response = Json(LoginResponse {
+        user: issued.user,
+        csrf_token: issued.csrf_token,
+    })
+    .into_response();
+    response
+        .headers_mut()
+        .append(header::SET_COOKIE, issued.session_cookie);
+    response
+        .headers_mut()
+        .append(header::SET_COOKIE, issued.csrf_cookie);
+
+    Ok(response)
+}
+
+async fn issue_login_session(
+    state: &AppState,
+    addr: SocketAddr,
+    payload: AuthRequest,
+) -> Result<IssuedSession, AppError> {
     let limiter_username = limiter_username(&payload.username);
     state
         .login_rate_limiter
         .check(addr.ip(), &limiter_username)
         .await?;
 
-    let repository = AuthRepository::new(state.pool);
+    let repository = AuthRepository::new(state.pool.clone());
     let session_result = match auth::login_user(
         &repository,
         &state.auth,
@@ -385,17 +482,12 @@ async fn login(
         state.auth.cookie_secure,
     )?;
 
-    let mut response = Json(LoginResponse {
+    Ok(IssuedSession {
         user: session_result.user,
         csrf_token,
+        session_cookie: cookie,
+        csrf_cookie,
     })
-    .into_response();
-    response.headers_mut().append(header::SET_COOKIE, cookie);
-    response
-        .headers_mut()
-        .append(header::SET_COOKIE, csrf_cookie);
-
-    Ok(response)
 }
 
 async fn me(
@@ -713,7 +805,24 @@ fn validate_csrf(headers: &HeaderMap, auth: &AuthConfig) -> Result<(), AppError>
         .filter(|value| !value.is_empty())
         .ok_or(AppError::Forbidden)?;
 
-    if cookie_token == header_token && cookie_token.len() >= 32 {
+    validate_csrf_pair(cookie_token, header_token)
+}
+
+fn validate_csrf_value(
+    headers: &HeaderMap,
+    auth: &AuthConfig,
+    submitted_token: &str,
+) -> Result<(), AppError> {
+    validate_origin(headers, auth)?;
+
+    let cookie_token =
+        extract_cookie(headers, CSRF_COOKIE_NAME).map_err(|_| AppError::Forbidden)?;
+
+    validate_csrf_pair(cookie_token, submitted_token)
+}
+
+fn validate_csrf_pair(cookie_token: &str, submitted_token: &str) -> Result<(), AppError> {
+    if cookie_token == submitted_token && cookie_token.len() >= 32 {
         Ok(())
     } else {
         Err(AppError::Forbidden)
