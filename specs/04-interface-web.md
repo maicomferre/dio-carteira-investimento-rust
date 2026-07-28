@@ -1,8 +1,8 @@
 # Fase 4 — Interface web server-rendered
 
-- **Status:** planejada
+- **Status:** em andamento
 - **Criado em:** 2026-07-25
-- **Última atualização:** 2026-07-25
+- **Última atualização:** 2026-07-28
 
 ## Objetivo
 
@@ -18,32 +18,32 @@ TypeScript, mantendo HTML server-rendered e complexidade baixa.
 
 ## Tarefas
 
-- [ ] Instalar Bootstrap e Bootstrap Icons pelo npm com versões fixadas e assets
+- [x] Instalar Bootstrap e Bootstrap Icons pelo npm com versões fixadas e assets
   locais; não usar CDN em produção.
-- [ ] Instalar SweetAlert2 pelo npm e encapsular confirmações, toasts e mensagens
+- [x] Instalar SweetAlert2 pelo npm e encapsular confirmações, toasts e mensagens
   globais num adapter tipado; não usar `window.alert`/`window.confirm`.
-- [ ] Compilar TypeScript estrito para `static/dist`; sem JavaScript inline.
-- [ ] Criar `HttpClient`/orquestrador único com generics para request/response,
+- [x] Compilar TypeScript estrito para `static/dist`; sem JavaScript inline.
+- [x] Criar `HttpClient`/orquestrador único com generics para request/response,
   `AbortController`, timeout, CSRF, headers e tratamento uniforme de erros.
 - [ ] Mapear 422 para erros inline, 401 para login seguro, 403 para acesso
   negado, 429 para espera orientada e 5xx para mensagem com correlation ID.
 - [ ] Centralizar rotas em configuração gerada pelo servidor; proibir URLs
   hardcoded e chamadas `fetch` diretas fora do cliente HTTP.
-- [ ] Criar layout Askama, parciais e páginas com escaping padrão.
-- [ ] Exibir no header um círculo com iniciais derivadas do username, sem upload
+- [x] Criar layout Askama, parciais e páginas com escaping padrão.
+- [x] Exibir no header um círculo com iniciais derivadas do username, sem upload
   ou URL de avatar.
 - [ ] Implementar formulários acessíveis, labels, foco de erro, navegação por
   teclado e contraste; idioma padrão `pt-BR`.
 - [ ] Validar no cliente limites e formato para feedback imediato, mantendo a
   mesma validação autoritativa no servidor.
-- [ ] Exibir dashboard com posições e totais por moeda.
-- [ ] Adicionar seletor BRL/USD e ocultar qualquer tentativa de somar moedas.
-- [ ] Renderizar gráfico de rosca por categoria e barras horizontais por ativo,
+- [x] Exibir dashboard com posições e totais por moeda.
+- [x] Adicionar seletor BRL/USD e ocultar qualquer tentativa de somar moedas.
+- [x] Renderizar gráfico de rosca por categoria e barras horizontais por ativo,
   ambos referentes à moeda selecionada.
-- [ ] Renderizar rosca de distribuição por corretora apenas se duas ou mais
+- [x] Renderizar rosca de distribuição por corretora apenas se duas ou mais
   corretoras tiverem posição positiva na moeda selecionada; percentuais usam o
   valor atual das posições, não aportes históricos.
-- [ ] Renderizar série diária com compras, vendas e fluxo líquido somente quando
+- [x] Renderizar série diária com compras, vendas e fluxo líquido somente quando
   houver movimentações; mostrar estado explicativo quando não houver dados.
 - [ ] Fornecer tabela/resumo textual equivalente aos gráficos para
   acessibilidade e fallback sem JavaScript.

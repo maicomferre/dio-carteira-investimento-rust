@@ -14,6 +14,7 @@ corretoras, ativos, movimentações e resumo da carteira.
 ## Requisitos locais
 
 - Rust 1.95.0
+- Node.js/npm para compilar os assets TypeScript
 - Docker com Compose
 - PostgreSQL 18.4 via `docker-compose.dev.yml`
 
@@ -26,6 +27,13 @@ sqlx migrate run
 cargo run
 ```
 
+Assets web locais:
+
+```bash
+npm install
+npm run build
+```
+
 O PostgreSQL de desenvolvimento é publicado em `127.0.0.1:5433` para evitar
 conflito com instalações locais que já usam a porta padrão `5432`.
 
@@ -35,9 +43,14 @@ Se o `sqlx-cli` não estiver instalado:
 cargo install sqlx-cli --version 0.9.0 --no-default-features --features postgres,rustls
 ```
 
-Endpoints iniciais:
+Rotas iniciais:
 
-- `GET /` — página/texto mínimo da aplicação.
+- `GET /` — redireciona para `/dashboard`.
+- `GET /login` e `GET /register` — páginas Askama de autenticação.
+- `POST /login`, `POST /register` e `POST /logout` — fallback server-rendered
+  para funcionar sem JavaScript.
+- `GET /dashboard` — dashboard autenticado com avatar de iniciais, totais por
+  moeda e gráficos progressivos via TypeScript.
 - `GET /health/live` — liveness sem dependência do banco.
 - `GET /health/ready` — readiness com consulta mínima ao PostgreSQL.
 - `POST /auth/register` — cadastra usuário com senha hasheada via Argon2id.
@@ -80,6 +93,8 @@ VPS, Nginx/Fail2ban continuam fora deste repositório público.
 cargo fmt --all -- --check
 cargo clippy --all-targets --all-features -- -D warnings
 cargo test --all-features
+npm run check
+npm run build
 ```
 
 Configurações reais de VPS, Nginx, Fail2ban, firewall, deploy remoto, backups e
