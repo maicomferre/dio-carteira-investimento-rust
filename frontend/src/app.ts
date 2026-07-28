@@ -1,6 +1,7 @@
 import { showError, showSuccess } from "./alerts.js";
 import { bootDashboard } from "./dashboard.js";
 import { HttpClient } from "./http.js";
+import { bootPortfolioPages } from "./portfolio-pages.js";
 
 const client = new HttpClient();
 
@@ -8,6 +9,7 @@ document.addEventListener("DOMContentLoaded", () => {
   bindAuthForms();
   bindLogout();
   bootDashboard();
+  bootPortfolioPages();
 });
 
 function bindAuthForms(): void {

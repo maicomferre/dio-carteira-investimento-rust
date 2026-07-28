@@ -1,0 +1,544 @@
+import { confirmAction, showError, showSuccess } from "./alerts.js";
+import { HttpClient } from "./http.js";
+
+interface Broker {
+  id: string;
+  name: string;
+  is_archived: boolean;
+  version: number;
+}
+
+interface Asset {
+  id: string;
+  symbol: string;
+  name: string;
+  market: string;
+  category: string;
+  currency: string;
+  current_price: string;
+  version: number;
+}
+
+interface Transaction {
+  id: string;
+  asset_id: string;
+  broker_id: string;
+  transaction_type: string;
+  quantity: string;
+  unit_price: string;
+  fees: string;
+  occurred_at: string;
+  notes?: string | null;
+}
+
+interface InstrumentSuggestion {
+  symbol: string;
+  name: string;
+  market: string;
+  category: string;
+  currency: string;
+  indicative_price: string;
+  source: string;
+}
+
+interface BrokerList {
+  brokers: Broker[];
+}
+
+interface AssetList {
+  assets: Asset[];
+}
+
+interface TransactionList {
+  transactions: Transaction[];
+}
+
+interface InstrumentSearch {
+  items: InstrumentSuggestion[];
+  cache: "fresh" | "hit" | "stale" | "miss";
+}
+
+const client = new HttpClient();
+
+export function bootPortfolioPages(): void {
+  bootBrokersPage();
+  bootAssetsPage();
+  bootTransactionsPage();
+}
+
+function bootBrokersPage(): void {
+  const page = document.querySelector<HTMLElement>("[data-brokers-page]");
+  if (page === null) return;
+
+  const form = page.querySelector<HTMLFormElement>("[data-broker-form]");
+  const cancel = page.querySelector<HTMLButtonElement>("[data-broker-cancel]");
+  if (form !== null) {
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      void submitBroker(form, page);
+    });
+  }
+  cancel?.addEventListener("click", () => resetBrokerForm(form));
+
+  void loadBrokers(page);
+}
+
+async function submitBroker(form: HTMLFormElement, page: HTMLElement): Promise<void> {
+  const name = inputValue(form, "name");
+  if (name.length < 2) return showErrorMessage("Informe uma corretora válida.");
+
+  try {
+    const id = form.dataset.editingId;
+    if (id === undefined) {
+      await client.post<{ name: string }, Broker>("/api/brokers", { name });
+      showSuccess("Corretora cadastrada");
+    } else {
+      const version = Number(form.dataset.editingVersion ?? "0");
+      await client.patch<{ name: string; version: number }, Broker>(`/api/brokers/${id}`, {
+        name,
+        version,
+      });
+      showSuccess("Corretora atualizada");
+    }
+    resetBrokerForm(form);
+    await loadBrokers(page);
+  } catch (error) {
+    showError(error);
+  }
+}
+
+async function loadBrokers(page: HTMLElement): Promise<Broker[]> {
+  const target = page.querySelector<HTMLElement>("[data-broker-list]");
+  try {
+    const { brokers } = await client.get<BrokerList>("/api/brokers");
+    renderBrokers(target, brokers, page);
+    return brokers;
+  } catch (error) {
+    showError(error);
+    return [];
+  }
+}
+
+function renderBrokers(target: HTMLElement | null, brokers: Broker[], page: HTMLElement): void {
+  if (target === null) return;
+  if (brokers.length === 0) {
+    target.replaceChildren(rowWithMessage("Nenhuma corretora cadastrada.", 3));
+    return;
+  }
+
+  target.replaceChildren(
+    ...brokers.map((broker) => {
+      const row = document.createElement("tr");
+      row.append(
+        tableCell(broker.name),
+        tableCell(broker.is_archived ? "Arquivada" : "Ativa"),
+        actionCell([
+          button("Editar", "btn-outline-primary", () => fillBrokerForm(page, broker)),
+          button("Arquivar", "btn-outline-danger", () => void archiveBroker(page, broker), broker.is_archived),
+        ]),
+      );
+      return row;
+    }),
+  );
+}
+
+async function archiveBroker(page: HTMLElement, broker: Broker): Promise<void> {
+  if (!(await confirmAction(`Arquivar a corretora ${broker.name}?`))) return;
+
+  try {
+    await client.post<Record<string, never>, void>(`/api/brokers/${broker.id}/archive`, {});
+    showSuccess("Corretora arquivada");
+    await loadBrokers(page);
+  } catch (error) {
+    showError(error);
+  }
+}
+
+function fillBrokerForm(page: HTMLElement, broker: Broker): void {
+  const form = page.querySelector<HTMLFormElement>("[data-broker-form]");
+  const submit = page.querySelector<HTMLButtonElement>("[data-broker-submit]");
+  const cancel = page.querySelector<HTMLButtonElement>("[data-broker-cancel]");
+  if (form === null) return;
+  setInputValue(form, "name", broker.name);
+  form.dataset.editingId = broker.id;
+  form.dataset.editingVersion = String(broker.version);
+  if (submit !== null) submit.textContent = "Salvar corretora";
+  if (cancel !== null) cancel.hidden = false;
+}
+
+function resetBrokerForm(form: HTMLFormElement | null): void {
+  if (form === null) return;
+  form.reset();
+  delete form.dataset.editingId;
+  delete form.dataset.editingVersion;
+  const submit = document.querySelector<HTMLButtonElement>("[data-broker-submit]");
+  const cancel = document.querySelector<HTMLButtonElement>("[data-broker-cancel]");
+  if (submit !== null) submit.textContent = "Cadastrar corretora";
+  if (cancel !== null) cancel.hidden = true;
+}
+
+function bootAssetsPage(): void {
+  const page = document.querySelector<HTMLElement>("[data-assets-page]");
+  if (page === null) return;
+
+  const form = page.querySelector<HTMLFormElement>("[data-asset-form]");
+  const cancel = page.querySelector<HTMLButtonElement>("[data-asset-cancel]");
+  const symbol = page.querySelector<HTMLInputElement>("#asset-symbol");
+  if (form !== null) {
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      void submitAsset(form, page);
+    });
+  }
+  cancel?.addEventListener("click", () => resetAssetForm(form));
+  symbol?.addEventListener("input", debounce(() => void searchInstrument(page, symbol.value), 350));
+
+  void loadAssets(page);
+}
+
+async function submitAsset(form: HTMLFormElement, page: HTMLElement): Promise<void> {
+  const payload = {
+    symbol: inputValue(form, "symbol").toUpperCase(),
+    name: inputValue(form, "name"),
+    market: inputValue(form, "market"),
+    category: inputValue(form, "category"),
+    currency: inputValue(form, "currency"),
+    current_price: parseDecimal(inputValue(form, "current_price")),
+  };
+
+  if (payload.symbol.length < 2 || payload.name.length < 2 || payload.current_price === null) {
+    return showErrorMessage("Revise símbolo, nome e preço atual.");
+  }
+
+  try {
+    const id = form.dataset.editingId;
+    if (id === undefined) {
+      await client.post<typeof payload, Asset>("/api/assets", payload);
+      showSuccess("Ativo cadastrado");
+    } else {
+      const version = Number(form.dataset.editingVersion ?? "0");
+      await client.patch<typeof payload & { version: number }, Asset>(`/api/assets/${id}`, {
+        ...payload,
+        version,
+      });
+      showSuccess("Ativo atualizado");
+    }
+    resetAssetForm(form);
+    await loadAssets(page);
+  } catch (error) {
+    showError(error);
+  }
+}
+
+async function loadAssets(page: HTMLElement): Promise<Asset[]> {
+  const target = page.querySelector<HTMLElement>("[data-asset-list]");
+  try {
+    const { assets } = await client.get<AssetList>("/api/assets");
+    renderAssets(target, assets, page);
+    return assets;
+  } catch (error) {
+    showError(error);
+    return [];
+  }
+}
+
+function renderAssets(target: HTMLElement | null, assets: Asset[], page: HTMLElement): void {
+  if (target === null) return;
+  if (assets.length === 0) {
+    target.replaceChildren(rowWithMessage("Nenhum ativo cadastrado.", 6));
+    return;
+  }
+
+  target.replaceChildren(
+    ...assets.map((asset) => {
+      const row = document.createElement("tr");
+      row.append(
+        tableCell(asset.symbol),
+        tableCell(asset.name),
+        tableCell(asset.market),
+        tableCell(asset.currency),
+        tableCell(money(asset.current_price, asset.currency), "text-end"),
+        actionCell([button("Editar", "btn-outline-primary", () => fillAssetForm(page, asset))]),
+      );
+      return row;
+    }),
+  );
+}
+
+async function searchInstrument(page: HTMLElement, rawQuery: string): Promise<void> {
+  const query = rawQuery.trim().toUpperCase();
+  const status = page.querySelector<HTMLElement>("[data-instrument-status]");
+  const target = page.querySelector<HTMLElement>("[data-instrument-suggestions]");
+  if (target === null) return;
+  if (query.length < 2) {
+    target.replaceChildren();
+    if (status !== null) status.textContent = "Digite ao menos 2 caracteres para consultar metadados locais.";
+    return;
+  }
+
+  try {
+    const result = await client.get<InstrumentSearch>(`/api/instruments/search?q=${encodeURIComponent(query)}`);
+    if (status !== null) status.textContent = `Fonte: ${result.cache}. Se não encontrar, preencha manualmente.`;
+    target.replaceChildren(
+      ...result.items.map((item) => {
+        const option = document.createElement("button");
+        option.type = "button";
+        option.className = "list-group-item list-group-item-action";
+        option.textContent = `${item.symbol} — ${item.name} (${item.market}/${item.currency})`;
+        option.addEventListener("click", () => fillAssetSuggestion(page, item));
+        return option;
+      }),
+    );
+    if (result.items.length === 0) {
+      target.replaceChildren();
+    }
+  } catch (error) {
+    showError(error);
+  }
+}
+
+function fillAssetSuggestion(page: HTMLElement, item: InstrumentSuggestion): void {
+  const form = page.querySelector<HTMLFormElement>("[data-asset-form]");
+  if (form === null) return;
+  setInputValue(form, "symbol", item.symbol);
+  setInputValue(form, "name", item.name);
+  setInputValue(form, "market", item.market);
+  setInputValue(form, "category", item.category);
+  setInputValue(form, "currency", item.currency);
+  setInputValue(form, "current_price", item.indicative_price);
+  page.querySelector<HTMLElement>("[data-instrument-suggestions]")?.replaceChildren();
+}
+
+function fillAssetForm(page: HTMLElement, asset: Asset): void {
+  const form = page.querySelector<HTMLFormElement>("[data-asset-form]");
+  const submit = page.querySelector<HTMLButtonElement>("[data-asset-submit]");
+  const cancel = page.querySelector<HTMLButtonElement>("[data-asset-cancel]");
+  if (form === null) return;
+  setInputValue(form, "symbol", asset.symbol);
+  setInputValue(form, "name", asset.name);
+  setInputValue(form, "market", asset.market);
+  setInputValue(form, "category", asset.category);
+  setInputValue(form, "currency", asset.currency);
+  setInputValue(form, "current_price", asset.current_price);
+  form.dataset.editingId = asset.id;
+  form.dataset.editingVersion = String(asset.version);
+  if (submit !== null) submit.textContent = "Salvar ativo";
+  if (cancel !== null) cancel.hidden = false;
+}
+
+function resetAssetForm(form: HTMLFormElement | null): void {
+  if (form === null) return;
+  form.reset();
+  delete form.dataset.editingId;
+  delete form.dataset.editingVersion;
+  document.querySelector<HTMLElement>("[data-instrument-suggestions]")?.replaceChildren();
+  const submit = document.querySelector<HTMLButtonElement>("[data-asset-submit]");
+  const cancel = document.querySelector<HTMLButtonElement>("[data-asset-cancel]");
+  if (submit !== null) submit.textContent = "Cadastrar ativo";
+  if (cancel !== null) cancel.hidden = true;
+}
+
+function bootTransactionsPage(): void {
+  const page = document.querySelector<HTMLElement>("[data-transactions-page]");
+  if (page === null) return;
+
+  const form = page.querySelector<HTMLFormElement>("[data-transaction-form]");
+  if (form !== null) {
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      void submitTransaction(form, page);
+    });
+  }
+
+  void refreshTransactionsPage(page);
+}
+
+async function refreshTransactionsPage(page: HTMLElement): Promise<void> {
+  const [assets, brokers] = await Promise.all([loadAssetOptions(page), loadBrokerOptions(page)]);
+  await loadTransactions(page, assets, brokers);
+}
+
+async function loadAssetOptions(page: HTMLElement): Promise<Asset[]> {
+  const select = page.querySelector<HTMLSelectElement>("[data-asset-select]");
+  const { assets } = await client.get<AssetList>("/api/assets");
+  if (select !== null) {
+    select.replaceChildren(...assets.map((asset) => option(asset.id, `${asset.symbol} — ${asset.name}`)));
+  }
+  return assets;
+}
+
+async function loadBrokerOptions(page: HTMLElement): Promise<Broker[]> {
+  const select = page.querySelector<HTMLSelectElement>("[data-broker-select]");
+  const { brokers } = await client.get<BrokerList>("/api/brokers");
+  const active = brokers.filter((broker) => !broker.is_archived);
+  if (select !== null) {
+    select.replaceChildren(...active.map((broker) => option(broker.id, broker.name)));
+  }
+  return brokers;
+}
+
+async function submitTransaction(form: HTMLFormElement, page: HTMLElement): Promise<void> {
+  const type = inputValue(form, "transaction_type");
+  const payload = {
+    asset_id: inputValue(form, "asset_id"),
+    broker_id: inputValue(form, "broker_id"),
+    quantity: parseDecimal(inputValue(form, "quantity")),
+    unit_price: parseDecimal(inputValue(form, "unit_price")),
+    fees: parseDecimal(inputValue(form, "fees") || "0"),
+  };
+  const date = inputValue(form, "occurred_at");
+  const notes = inputValue(form, "notes");
+
+  if (payload.asset_id === "" || payload.broker_id === "" || payload.quantity === null || payload.unit_price === null || payload.fees === null) {
+    return showErrorMessage("Revise ativo, corretora, quantidade, preço e taxas.");
+  }
+
+  const request: {
+    asset_id: string;
+    broker_id: string;
+    quantity: string;
+    unit_price: string;
+    fees: string;
+    occurred_at_unix?: number;
+    notes?: string;
+  } = {
+    asset_id: payload.asset_id,
+    broker_id: payload.broker_id,
+    quantity: payload.quantity,
+    unit_price: payload.unit_price,
+    fees: payload.fees,
+  };
+  if (date !== "") request.occurred_at_unix = Math.floor(new Date(`${date}T12:00:00`).getTime() / 1000);
+  if (notes !== "") request.notes = notes;
+
+  try {
+    await client.post<typeof request, Transaction>(`/api/transactions/${type === "sell" ? "sell" : "buy"}`, request);
+    showSuccess("Movimentação registrada");
+    form.reset();
+    await refreshTransactionsPage(page);
+  } catch (error) {
+    showError(error);
+  }
+}
+
+async function loadTransactions(page: HTMLElement, assets: Asset[], brokers: Broker[]): Promise<void> {
+  const target = page.querySelector<HTMLElement>("[data-transaction-list]");
+  try {
+    const { transactions } = await client.get<TransactionList>("/api/transactions");
+    renderTransactions(target, transactions, assets, brokers);
+  } catch (error) {
+    showError(error);
+  }
+}
+
+function renderTransactions(target: HTMLElement | null, transactions: Transaction[], assets: Asset[], brokers: Broker[]): void {
+  if (target === null) return;
+  if (transactions.length === 0) {
+    target.replaceChildren(rowWithMessage("Nenhuma movimentação registrada.", 7));
+    return;
+  }
+
+  const assetNames = new Map(assets.map((asset) => [asset.id, asset.symbol]));
+  const brokerNames = new Map(brokers.map((broker) => [broker.id, broker.name]));
+  target.replaceChildren(
+    ...transactions.map((transaction) => {
+      const row = document.createElement("tr");
+      row.append(
+        tableCell(formatDate(transaction.occurred_at)),
+        tableCell(transaction.transaction_type === "BUY" ? "Compra" : "Venda"),
+        tableCell(assetNames.get(transaction.asset_id) ?? shortId(transaction.asset_id)),
+        tableCell(brokerNames.get(transaction.broker_id) ?? shortId(transaction.broker_id)),
+        tableCell(transaction.quantity, "text-end"),
+        tableCell(transaction.unit_price, "text-end"),
+        tableCell(transaction.fees, "text-end"),
+      );
+      return row;
+    }),
+  );
+}
+
+function inputValue(form: HTMLFormElement, name: string): string {
+  const element = form.elements.namedItem(name);
+  if (element instanceof HTMLInputElement || element instanceof HTMLSelectElement || element instanceof HTMLTextAreaElement) {
+    return element.value.trim();
+  }
+  return "";
+}
+
+function setInputValue(form: HTMLFormElement, name: string, value: string): void {
+  const element = form.elements.namedItem(name);
+  if (element instanceof HTMLInputElement || element instanceof HTMLSelectElement || element instanceof HTMLTextAreaElement) {
+    element.value = value;
+  }
+}
+
+function parseDecimal(value: string): string | null {
+  const normalized = value.trim().replace(",", ".");
+  return /^\d+(\.\d{1,8})?$/.test(normalized) ? normalized : null;
+}
+
+function tableCell(value: string, className?: string): HTMLTableCellElement {
+  const cell = document.createElement("td");
+  cell.textContent = value;
+  if (className !== undefined) cell.className = className;
+  return cell;
+}
+
+function actionCell(actions: HTMLButtonElement[]): HTMLTableCellElement {
+  const cell = tableCell("", "text-end");
+  const group = document.createElement("div");
+  group.className = "btn-group btn-group-sm";
+  group.append(...actions);
+  cell.append(group);
+  return cell;
+}
+
+function button(label: string, variant: string, onClick: () => void, disabled = false): HTMLButtonElement {
+  const element = document.createElement("button");
+  element.type = "button";
+  element.className = `btn ${variant}`;
+  element.textContent = label;
+  element.disabled = disabled;
+  element.addEventListener("click", onClick);
+  return element;
+}
+
+function rowWithMessage(message: string, columns: number): HTMLTableRowElement {
+  const row = document.createElement("tr");
+  const cell = tableCell(message);
+  cell.colSpan = columns;
+  row.append(cell);
+  return row;
+}
+
+function option(value: string, label: string): HTMLOptionElement {
+  const element = document.createElement("option");
+  element.value = value;
+  element.textContent = label;
+  return element;
+}
+
+function money(value: string, currency: string): string {
+  return new Intl.NumberFormat("pt-BR", { style: "currency", currency }).format(Number(value));
+}
+
+function formatDate(value: string): string {
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? value : parsed.toLocaleDateString("pt-BR");
+}
+
+function shortId(value: string): string {
+  return value.slice(0, 8);
+}
+
+function showErrorMessage(message: string): void {
+  showError({ code: "validation_error", message, status: 400 });
+}
+
+function debounce(callback: () => void, waitMs: number): () => void {
+  let handle = 0;
+  return () => {
+    window.clearTimeout(handle);
+    handle = window.setTimeout(callback, waitMs);
+  };
+}

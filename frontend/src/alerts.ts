@@ -7,7 +7,12 @@ interface SweetAlert {
     icon?: "success" | "error" | "warning" | "info";
     timer?: number;
     showConfirmButton?: boolean;
-  }): Promise<unknown>;
+    showCancelButton?: boolean;
+    confirmButtonText?: string;
+    cancelButtonText?: string;
+  }): Promise<{
+    isConfirmed?: boolean;
+  }>;
 }
 
 declare global {
@@ -36,6 +41,23 @@ export function showSuccess(message: string): void {
     timer: 1800,
     showConfirmButton: false,
   });
+}
+
+export async function confirmAction(message: string): Promise<boolean> {
+  if (window.Swal !== undefined) {
+    const result = await window.Swal.fire({
+      title: "Confirmar ação",
+      text: message,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Confirmar",
+      cancelButtonText: "Cancelar",
+    });
+
+    return result.isConfirmed === true;
+  }
+
+  return false;
 }
 
 function show(options: Parameters<SweetAlert["fire"]>[0]): void {

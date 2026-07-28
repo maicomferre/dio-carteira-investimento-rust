@@ -44,6 +44,17 @@ interface DailyCashFlow {
   net_flow: string;
 }
 
+interface Broker {
+  id: string;
+  name: string;
+}
+
+interface Asset {
+  id: string;
+  symbol: string;
+  name: string;
+}
+
 const client = new HttpClient();
 
 export function bootDashboard(): void {
@@ -55,16 +66,28 @@ export function bootDashboard(): void {
 
 async function loadDashboard(root: HTMLElement): Promise<void> {
   try {
-    const summary = await client.get<PortfolioSummary>("/api/portfolio/summary");
-    renderCurrencyTabs(root, summary);
+    const [summary, assets, brokers] = await Promise.all([
+      client.get<PortfolioSummary>("/api/portfolio/summary"),
+      client.get<{ assets: Asset[] }>("/api/assets"),
+      client.get<{ brokers: Broker[] }>("/api/brokers"),
+    ]);
+    const labels = {
+      assets: new Map(assets.assets.map((asset) => [asset.id, asset.symbol])),
+      brokers: new Map(brokers.brokers.map((broker) => [broker.id, broker.name])),
+    };
+    renderCurrencyTabs(root, summary, labels);
     const currency = summary.totals_by_currency[0]?.currency ?? "BRL";
-    renderCurrency(root, summary, currency);
+    renderCurrency(root, summary, currency, labels);
   } catch (error) {
     showError(error);
   }
 }
 
-function renderCurrencyTabs(root: HTMLElement, summary: PortfolioSummary): void {
+function renderCurrencyTabs(
+  root: HTMLElement,
+  summary: PortfolioSummary,
+  labels: { assets: Map<string, string>; brokers: Map<string, string> },
+): void {
   const target = root.querySelector<HTMLElement>("[data-currency-tabs]");
   if (target === null) return;
 
@@ -79,19 +102,24 @@ function renderCurrencyTabs(root: HTMLElement, summary: PortfolioSummary): void 
           element.className = "btn btn-sm btn-outline-primary";
         });
         button.className = "btn btn-sm btn-primary";
-        renderCurrency(root, summary, item.currency);
+        renderCurrency(root, summary, item.currency, labels);
       });
       return button;
     }),
   );
 }
 
-function renderCurrency(root: HTMLElement, summary: PortfolioSummary, currency: string): void {
+function renderCurrency(
+  root: HTMLElement,
+  summary: PortfolioSummary,
+  currency: string,
+  labels: { assets: Map<string, string>; brokers: Map<string, string> },
+): void {
   const total = summary.totals_by_currency.find((item) => item.currency === currency);
   setText(root, "[data-total-selected]", money(total?.total ?? "0", currency));
   renderDonut(root, "[data-category-chart]", summary.allocation_by_category.filter((item) => item.currency === currency));
-  renderBars(root, summary.positions.filter((item) => item.currency === currency), currency);
-  renderBrokerDonut(root, summary.allocation_by_broker.filter((item) => item.currency === currency));
+  renderBars(root, summary.positions.filter((item) => item.currency === currency), currency, labels);
+  renderBrokerDonut(root, summary.allocation_by_broker.filter((item) => item.currency === currency), labels.brokers);
   renderCashFlow(root, summary.daily_cash_flow);
 }
 
@@ -106,7 +134,7 @@ function renderDonut(root: HTMLElement, selector: string, items: Array<{ categor
   target.replaceChildren(svgDonut(items.map((item) => ({ label: item.category, value: Number(item.total) }))));
 }
 
-function renderBrokerDonut(root: HTMLElement, items: BrokerAllocation[]): void {
+function renderBrokerDonut(root: HTMLElement, items: BrokerAllocation[], brokerLabels: Map<string, string>): void {
   const section = root.querySelector<HTMLElement>("[data-broker-section]");
   const target = root.querySelector<HTMLElement>("[data-broker-chart]");
   if (section === null || target === null) return;
@@ -117,10 +145,15 @@ function renderBrokerDonut(root: HTMLElement, items: BrokerAllocation[]): void {
   }
 
   section.hidden = false;
-  target.replaceChildren(svgDonut(items.map((item) => ({ label: shortId(item.broker_id), value: Number(item.total) }))));
+  target.replaceChildren(svgDonut(items.map((item) => ({ label: brokerLabels.get(item.broker_id) ?? shortId(item.broker_id), value: Number(item.total) }))));
 }
 
-function renderBars(root: HTMLElement, positions: Position[], currency: string): void {
+function renderBars(
+  root: HTMLElement,
+  positions: Position[],
+  currency: string,
+  labels: { assets: Map<string, string>; brokers: Map<string, string> },
+): void {
   const target = root.querySelector<HTMLElement>("[data-asset-bars]");
   if (target === null) return;
   if (positions.length === 0) {
@@ -135,7 +168,9 @@ function renderBars(root: HTMLElement, positions: Position[], currency: string):
       wrapper.className = "mb-3";
       const label = document.createElement("div");
       label.className = "d-flex justify-content-between small";
-      label.append(textSpan(shortId(item.asset_id)), textSpan(money(item.cost_basis, currency)));
+      const asset = labels.assets.get(item.asset_id) ?? shortId(item.asset_id);
+      const broker = labels.brokers.get(item.broker_id) ?? shortId(item.broker_id);
+      label.append(textSpan(`${asset} · ${broker}`), textSpan(money(item.cost_basis, currency)));
       const progress = document.createElement("div");
       progress.className = "progress";
       progress.setAttribute("role", "progressbar");
