@@ -1,8 +1,8 @@
 # Fase 5 — Hardening, abuso e testes adversariais
 
-- **Status:** planejada
+- **Status:** em andamento
 - **Criado em:** 2026-07-25
-- **Última atualização:** 2026-07-25
+- **Última atualização:** 2026-07-28
 
 ## Objetivo
 
@@ -38,7 +38,7 @@ Top 10:2025, além de resiliência a abuso e falhas externas.
 - [ ] Limitar tamanho de headers/body, duração, conexões, concorrência e pool.
 - [ ] Configurar rate limits separados para global, login, registro e mutações.
 - [ ] Testar slow requests no proxy e saturação controlada da aplicação/DB.
-- [ ] Aplicar CSP, HSTS no perfil HTTPS, nosniff, referrer/frame policy e
+- [x] Aplicar CSP, HSTS no perfil HTTPS, nosniff, referrer/frame policy e
   `Cache-Control: no-store` em conteúdo autenticado.
 - [ ] Criar testes para CSRF, XSS armazenado/refletido, SQLi, IDOR, mass
   assignment, cookie/JWT e erro interno.

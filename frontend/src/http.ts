@@ -136,6 +136,7 @@ function readCookie(name: string): string | null {
 function defaultMessage(status: number): Pick<ApiError, "code" | "message"> {
   if (status === 401) return { code: "unauthorized", message: "Faça login novamente." };
   if (status === 403) return { code: "forbidden", message: "Acesso negado." };
+  if (status === 422) return { code: "validation_error", message: "Revise os campos destacados." };
   if (status === 429) return { code: "rate_limited", message: "Muitas tentativas. Aguarde." };
   if (status >= 500) return { code: "server_error", message: "Falha temporária no servidor." };
   return { code: "request_error", message: "Revise os dados enviados." };

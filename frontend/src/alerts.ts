@@ -23,14 +23,20 @@ declare global {
 
 export function showError(error: unknown): void {
   const apiError = isApiError(error) ? error : undefined;
+  if (apiError?.status === 401) {
+    window.setTimeout(() => {
+      window.location.assign("/login");
+    }, 1200);
+  }
+
   const message = apiError?.requestId
     ? `${apiError.message} ID: ${apiError.requestId}`
     : (apiError?.message ?? "Não foi possível concluir a operação.");
 
   show({
-    title: "Ação não concluída",
+    title: titleFor(apiError),
     text: message,
-    icon: "error",
+    icon: iconFor(apiError),
   });
 }
 
@@ -80,4 +86,18 @@ function isApiError(error: unknown): error is ApiError {
     "message" in error &&
     "status" in error
   );
+}
+
+function titleFor(error: ApiError | undefined): string {
+  if (error?.status === 401) return "Sessão expirada";
+  if (error?.status === 403) return "Acesso negado";
+  if (error?.status === 422) return "Dados inválidos";
+  if (error?.status === 429) return "Limite atingido";
+  if (error !== undefined && error.status >= 500) return "Falha temporária";
+  return "Ação não concluída";
+}
+
+function iconFor(error: ApiError | undefined): "error" | "warning" {
+  if (error?.status === 422 || error?.status === 429) return "warning";
+  return "error";
 }

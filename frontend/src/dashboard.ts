@@ -178,15 +178,11 @@ function renderBars(
       const asset = labels.assets.get(item.asset_id) ?? shortId(item.asset_id);
       const broker = labels.brokers.get(item.broker_id) ?? shortId(item.broker_id);
       label.append(textSpan(`${asset} · ${broker}`), textSpan(money(item.cost_basis, currency)));
-      const progress = document.createElement("div");
-      progress.className = "progress";
-      progress.setAttribute("role", "progressbar");
-      progress.setAttribute("aria-valuemin", "0");
-      progress.setAttribute("aria-valuemax", "100");
-      const bar = document.createElement("div");
-      bar.className = "progress-bar";
-      bar.style.width = `${max === 0 ? 0 : (Number(item.cost_basis) / max) * 100}%`;
-      progress.append(bar);
+      const progress = document.createElement("progress");
+      progress.className = "w-100";
+      progress.max = 100;
+      progress.value = max === 0 ? 0 : (Number(item.cost_basis) / max) * 100;
+      progress.setAttribute("aria-label", `${asset} em ${broker}`);
       wrapper.append(label, progress);
       return wrapper;
     }),

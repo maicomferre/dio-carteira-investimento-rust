@@ -25,10 +25,11 @@ TypeScript, mantendo HTML server-rendered e complexidade baixa.
 - [x] Compilar TypeScript estrito para `static/dist`; sem JavaScript inline.
 - [x] Criar `HttpClient`/orquestrador único com generics para request/response,
   `AbortController`, timeout, CSRF, headers e tratamento uniforme de erros.
-- [ ] Mapear 422 para erros inline, 401 para login seguro, 403 para acesso
-  negado, 429 para espera orientada e 5xx para mensagem com correlation ID.
+- [x] Mapear 422 para erro de validação, 401 para retorno ao login, 403 para
+  acesso negado, 429 para espera orientada e 5xx para mensagem com correlation ID.
 - [ ] Centralizar rotas em configuração gerada pelo servidor; proibir URLs
-  hardcoded e chamadas `fetch` diretas fora do cliente HTTP.
+  hardcoded e chamadas `fetch` diretas fora do cliente HTTP. Rotas TypeScript já
+  estão agrupadas, mas ainda não são geradas pelo servidor.
 - [x] Criar layout Askama, parciais e páginas com escaping padrão.
 - [x] Exibir no header um círculo com iniciais derivadas do username, sem upload
   ou URL de avatar.
@@ -59,7 +60,7 @@ TypeScript, mantendo HTML server-rendered e complexidade baixa.
 - [x] No registro da movimentação, mostrar a posição
   disponível daquele ativo dentro dela.
 - [x] Preservar valores seguros após erro e nunca preencher novamente senha.
-- [ ] Definir CSP compatível com assets locais e eliminar `unsafe-inline`.
+- [x] Definir CSP compatível com assets locais e eliminar `unsafe-inline`.
 - [ ] Verificar viewport móvel e navegadores modernos.
 
 ## Critérios de aceitação

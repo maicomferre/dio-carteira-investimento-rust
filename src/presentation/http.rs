@@ -3,8 +3,9 @@ use std::{net::SocketAddr, time::Duration};
 use askama::Template;
 use axum::{
     Form, Json, Router,
-    extract::{ConnectInfo, Path, Query, State},
+    extract::{ConnectInfo, Path, Query, Request, State},
     http::{HeaderMap, HeaderName, HeaderValue, StatusCode, header},
+    middleware::Next,
     response::{Html, IntoResponse, Redirect, Response},
     routing::{get, patch, post},
 };
@@ -50,6 +51,18 @@ const MAX_BODY_BYTES: usize = 1024 * 1024;
 const SESSION_COOKIE_NAME: &str = "investment_session";
 const CSRF_COOKIE_NAME: &str = "investment_csrf";
 const CSRF_HEADER_NAME: &str = "x-csrf-token";
+const CSP_POLICY: &str = concat!(
+    "default-src 'self'; ",
+    "base-uri 'self'; ",
+    "object-src 'none'; ",
+    "frame-ancestors 'none'; ",
+    "form-action 'self'; ",
+    "script-src 'self'; ",
+    "style-src 'self'; ",
+    "font-src 'self'; ",
+    "img-src 'self' data:; ",
+    "connect-src 'self'"
+);
 
 #[derive(Clone)]
 pub struct AppState {
@@ -313,6 +326,7 @@ pub fn build_router(
             StatusCode::REQUEST_TIMEOUT,
             Duration::from_secs(10),
         ))
+        .layer(axum::middleware::from_fn(security_headers))
         .layer(RequestBodyLimitLayer::new(MAX_BODY_BYTES))
         .layer(TraceLayer::new_for_http())
 }
@@ -1037,10 +1051,46 @@ fn summary_response(summary: PortfolioSummary) -> PortfolioSummaryResponse {
     }
 }
 
+async fn security_headers(request: Request, next: Next) -> Response {
+    let mut response = next.run(request).await;
+    insert_security_headers(&mut response);
+
+    response
+}
+
+fn insert_security_headers(response: &mut Response) {
+    let headers = response.headers_mut();
+    headers.insert(
+        header::CONTENT_SECURITY_POLICY,
+        HeaderValue::from_static(CSP_POLICY),
+    );
+    headers.insert(
+        header::X_CONTENT_TYPE_OPTIONS,
+        HeaderValue::from_static("nosniff"),
+    );
+    headers.insert(header::X_FRAME_OPTIONS, HeaderValue::from_static("DENY"));
+    headers.insert(
+        header::REFERRER_POLICY,
+        HeaderValue::from_static("strict-origin-when-cross-origin"),
+    );
+    headers.insert(
+        header::CACHE_CONTROL,
+        HeaderValue::from_static("no-store, max-age=0"),
+    );
+    headers.insert(
+        header::STRICT_TRANSPORT_SECURITY,
+        HeaderValue::from_static("max-age=31536000; includeSubDomains"),
+    );
+}
+
 impl IntoResponse for AppError {
     fn into_response(self) -> Response {
         let (status, code, message) = match self {
-            AppError::Validation(message) => (StatusCode::BAD_REQUEST, "validation_error", message),
+            AppError::Validation(message) => (
+                StatusCode::UNPROCESSABLE_ENTITY,
+                "validation_error",
+                message,
+            ),
             AppError::InvalidCredentials => (
                 StatusCode::UNAUTHORIZED,
                 "invalid_credentials",
@@ -1163,5 +1213,34 @@ mod tests {
     #[test]
     fn username_initials_falls_back_for_blank_value() {
         assert_eq!(username_initials("  "), "?");
+    }
+
+    #[test]
+    fn validation_errors_use_unprocessable_entity() {
+        assert_eq!(
+            AppError::Validation("campo inválido")
+                .into_response()
+                .status(),
+            StatusCode::UNPROCESSABLE_ENTITY
+        );
+    }
+
+    #[test]
+    fn security_headers_include_csp_and_no_store() {
+        let mut response = StatusCode::OK.into_response();
+        insert_security_headers(&mut response);
+
+        assert_eq!(
+            response.headers().get(header::CONTENT_SECURITY_POLICY),
+            Some(&HeaderValue::from_static(CSP_POLICY))
+        );
+        assert_eq!(
+            response.headers().get(header::CACHE_CONTROL),
+            Some(&HeaderValue::from_static("no-store, max-age=0"))
+        );
+        assert_eq!(
+            response.headers().get(header::X_CONTENT_TYPE_OPTIONS),
+            Some(&HeaderValue::from_static("nosniff"))
+        );
     }
 }
