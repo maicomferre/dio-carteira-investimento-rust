@@ -29,6 +29,9 @@ pub enum LogFormat {
 #[derive(Debug, Clone)]
 pub struct HttpConfig {
     pub bind_addr: SocketAddr,
+    pub request_timeout: Duration,
+    pub max_body_bytes: usize,
+    pub max_concurrent_requests: usize,
 }
 
 #[derive(Debug, Clone)]
@@ -81,6 +84,18 @@ impl AppConfig {
             .unwrap_or_else(|| "127.0.0.1:3000".to_owned())
             .parse()
             .context("APP_BIND_ADDR inválido")?;
+        let request_timeout_seconds = read_env_parse("APP_REQUEST_TIMEOUT_SECONDS", 10)?;
+        if !(1..=60).contains(&request_timeout_seconds) {
+            bail!("APP_REQUEST_TIMEOUT_SECONDS deve ficar entre 1 e 60");
+        }
+        let max_body_bytes = read_env_parse("APP_MAX_BODY_BYTES", 1_048_576)?;
+        if !(16_384..=10_485_760).contains(&max_body_bytes) {
+            bail!("APP_MAX_BODY_BYTES deve ficar entre 16384 e 10485760");
+        }
+        let max_concurrent_requests = read_env_parse("APP_MAX_CONCURRENT_REQUESTS", 128)?;
+        if !(1..=2_048).contains(&max_concurrent_requests) {
+            bail!("APP_MAX_CONCURRENT_REQUESTS deve ficar entre 1 e 2048");
+        }
 
         let url = read_env("DATABASE_URL").context("DATABASE_URL é obrigatório")?;
         if url.trim().is_empty() {
@@ -210,7 +225,12 @@ impl AppConfig {
                 log_format,
                 log_level,
             },
-            http: HttpConfig { bind_addr },
+            http: HttpConfig {
+                bind_addr,
+                request_timeout: Duration::from_secs(request_timeout_seconds),
+                max_body_bytes,
+                max_concurrent_requests,
+            },
             database: DatabaseConfig {
                 url,
                 max_connections,

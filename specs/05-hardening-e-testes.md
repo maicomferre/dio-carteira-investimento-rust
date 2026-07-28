@@ -35,8 +35,14 @@ Top 10:2025, além de resiliência a abuso e falhas externas.
 
 ## Tarefas
 
-- [ ] Limitar tamanho de headers/body, duração, conexões, concorrência e pool.
-- [ ] Configurar rate limits separados para global, login, registro e mutações.
+- [x] Limitar body, duração, concorrência e pool dentro da aplicação.
+  - `APP_MAX_BODY_BYTES` limita o corpo aceito pelo Axum.
+  - `APP_REQUEST_TIMEOUT_SECONDS` limita duração de request.
+  - `APP_MAX_CONCURRENT_REQUESTS` rejeita saturação interna com `503`.
+  - `DATABASE_MAX_CONNECTIONS` e `DATABASE_ACQUIRE_TIMEOUT_SECONDS` limitam pool.
+  - Tamanho de headers e conexões de borda ficam na camada Nginx/gateway privada;
+    a configuração concreta do VPS não é versionada neste repositório público.
+- [x] Configurar rate limits separados para global, login, registro e mutações.
   - [x] Login: limite por IP + usuário normalizado, com atraso progressivo em
     falhas e bloqueio temporário.
   - [x] Registro: limite por IP antes de acessar o banco.
@@ -60,7 +66,8 @@ Top 10:2025, além de resiliência a abuso e falhas externas.
 ## Critérios de aceitação
 
 - [ ] Nenhuma pendência crítica/alta conhecida.
-- [ ] Todos os limites retornam erro controlado, sem crash ou vazamento.
+- [x] Todos os limites implementados na aplicação retornam erro controlado, sem
+  crash ou vazamento.
 - [ ] Matriz ASVS/Top 10 aponta para testes ou configuração verificável.
 - [ ] Carga acima do limite degrada de forma previsível e recupera depois.
 

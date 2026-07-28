@@ -31,6 +31,7 @@ async fn main() -> anyhow::Result<()> {
 
     let app = build_router(
         pool,
+        config.http.clone(),
         config.auth.clone(),
         config.instrument_provider.clone(),
     );

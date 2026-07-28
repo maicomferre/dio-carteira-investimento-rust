@@ -1,4 +1,4 @@
-use std::{net::SocketAddr, time::Duration};
+use std::{net::SocketAddr, sync::Arc, time::Duration};
 
 use askama::Template;
 use axum::{
@@ -13,6 +13,7 @@ use rust_decimal::Decimal;
 use serde::Serialize;
 use sqlx::PgPool;
 use time::OffsetDateTime;
+use tokio::sync::Semaphore;
 use tower_http::{
     limit::RequestBodyLimitLayer,
     request_id::{MakeRequestUuid, PropagateRequestIdLayer, SetRequestIdLayer},
@@ -39,7 +40,7 @@ use crate::{
     },
     infrastructure::{
         auth_repository::AuthRepository,
-        config::AuthConfig,
+        config::{AuthConfig, HttpConfig},
         instrument_provider::{CachedInstrumentProvider, InstrumentProviderConfig},
         portfolio_repository::PortfolioRepository,
         security::{IpRateLimiter, LoginRateLimiter},
@@ -47,7 +48,6 @@ use crate::{
 };
 
 const REQUEST_ID_HEADER: &str = "x-request-id";
-const MAX_BODY_BYTES: usize = 1024 * 1024;
 const SESSION_COOKIE_NAME: &str = "investment_session";
 const CSRF_COOKIE_NAME: &str = "investment_csrf";
 const CSRF_HEADER_NAME: &str = "x-csrf-token";
@@ -75,6 +75,7 @@ pub struct AppState {
     pub login_rate_limiter: LoginRateLimiter,
     pub register_rate_limiter: IpRateLimiter,
     pub mutation_rate_limiter: IpRateLimiter,
+    pub concurrency_limiter: Arc<Semaphore>,
     pub instrument_provider: CachedInstrumentProvider,
 }
 
@@ -284,6 +285,7 @@ struct DailyCashFlowResponse {
 
 pub fn build_router(
     pool: PgPool,
+    http: HttpConfig,
     auth: AuthConfig,
     instrument_provider_config: InstrumentProviderConfig,
 ) -> Router {
@@ -316,6 +318,7 @@ pub fn build_router(
         login_rate_limiter,
         register_rate_limiter,
         mutation_rate_limiter,
+        concurrency_limiter: Arc::new(Semaphore::new(http.max_concurrent_requests)),
         instrument_provider: CachedInstrumentProvider::new(instrument_provider_config),
     };
 
@@ -350,14 +353,18 @@ pub fn build_router(
         .layer(SetRequestIdLayer::new(request_id_header, MakeRequestUuid))
         .layer(TimeoutLayer::with_status_code(
             StatusCode::REQUEST_TIMEOUT,
-            Duration::from_secs(10),
+            http.request_timeout,
+        ))
+        .layer(axum::middleware::from_fn_with_state(
+            state.clone(),
+            concurrency_limit,
         ))
         .layer(axum::middleware::from_fn_with_state(
             state,
             global_rate_limit,
         ))
         .layer(axum::middleware::from_fn(security_headers))
-        .layer(RequestBodyLimitLayer::new(MAX_BODY_BYTES))
+        .layer(RequestBodyLimitLayer::new(http.max_body_bytes))
         .layer(TraceLayer::new_for_http())
 }
 
@@ -385,6 +392,24 @@ async fn global_rate_limit(
         );
         return Err(error);
     }
+
+    Ok(next.run(request).await)
+}
+
+async fn concurrency_limit(
+    State(state): State<AppState>,
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+    request: Request,
+    next: Next,
+) -> Result<Response, AppError> {
+    let Ok(_permit) = state.concurrency_limiter.clone().try_acquire_owned() else {
+        tracing::warn!(
+            client_ip = %addr.ip(),
+            path = request.uri().path(),
+            "requisição bloqueada por limite de concorrência"
+        );
+        return Err(AppError::Unavailable);
+    };
 
     Ok(next.run(request).await)
 }
