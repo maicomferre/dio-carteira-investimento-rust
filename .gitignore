@@ -1,0 +1,13 @@
+/target
+.idea/
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+*.log
+node_modules/
+static/dist/

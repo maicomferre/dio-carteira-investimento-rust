@@ -1,0 +1,81 @@
+# Fase 4 — Interface web server-rendered
+
+- **Status:** planejada
+- **Criado em:** 2026-07-25
+- **Última atualização:** 2026-07-25
+
+## Objetivo
+
+Oferecer uma interface responsiva e acessível com Askama, Bootstrap e
+TypeScript, mantendo HTML server-rendered e complexidade baixa.
+
+## Escopo
+
+- **Dentro:** layouts, cadastro/login, dashboard, formulários de ativo,
+  mensagens de erro, acessibilidade e melhorias progressivas.
+- **Fora:** SPA, React, estado global no navegador e gráficos de rentabilidade
+  histórica sem dados que os sustentem.
+
+## Tarefas
+
+- [ ] Instalar Bootstrap e Bootstrap Icons pelo npm com versões fixadas e assets
+  locais; não usar CDN em produção.
+- [ ] Instalar SweetAlert2 pelo npm e encapsular confirmações, toasts e mensagens
+  globais num adapter tipado; não usar `window.alert`/`window.confirm`.
+- [ ] Compilar TypeScript estrito para `static/dist`; sem JavaScript inline.
+- [ ] Criar `HttpClient`/orquestrador único com generics para request/response,
+  `AbortController`, timeout, CSRF, headers e tratamento uniforme de erros.
+- [ ] Mapear 422 para erros inline, 401 para login seguro, 403 para acesso
+  negado, 429 para espera orientada e 5xx para mensagem com correlation ID.
+- [ ] Centralizar rotas em configuração gerada pelo servidor; proibir URLs
+  hardcoded e chamadas `fetch` diretas fora do cliente HTTP.
+- [ ] Criar layout Askama, parciais e páginas com escaping padrão.
+- [ ] Exibir no header um círculo com iniciais derivadas do username, sem upload
+  ou URL de avatar.
+- [ ] Implementar formulários acessíveis, labels, foco de erro, navegação por
+  teclado e contraste; idioma padrão `pt-BR`.
+- [ ] Validar no cliente limites e formato para feedback imediato, mantendo a
+  mesma validação autoritativa no servidor.
+- [ ] Exibir dashboard com posições e totais por moeda.
+- [ ] Adicionar seletor BRL/USD e ocultar qualquer tentativa de somar moedas.
+- [ ] Renderizar gráfico de rosca por categoria e barras horizontais por ativo,
+  ambos referentes à moeda selecionada.
+- [ ] Renderizar rosca de distribuição por corretora apenas se duas ou mais
+  corretoras tiverem posição positiva na moeda selecionada; percentuais usam o
+  valor atual das posições, não aportes históricos.
+- [ ] Renderizar série diária com compras, vendas e fluxo líquido somente quando
+  houver movimentações; mostrar estado explicativo quando não houver dados.
+- [ ] Fornecer tabela/resumo textual equivalente aos gráficos para
+  acessibilidade e fallback sem JavaScript.
+- [ ] Criar tela de extrato com filtros por período, ativo e tipo, além do botão
+  “Registrar movimentação”.
+- [ ] Criar tela “Corretoras” para cadastrar, editar e arquivar; não usar uma
+  tela genérica de configurações no MVP.
+- [ ] No cadastro do ativo, buscar símbolo com debounce/cancelamento no backend,
+  exibir fonte/instante, permitir seleção inequívoca e manter modo manual.
+- [ ] No registro da movimentação, exigir corretora e mostrar a posição
+  disponível daquele ativo dentro dela.
+- [ ] Preservar valores seguros após erro e nunca preencher novamente senha.
+- [ ] Definir CSP compatível com assets locais e eliminar `unsafe-inline`.
+- [ ] Verificar viewport móvel e navegadores modernos.
+
+## Critérios de aceitação
+
+- [ ] Fluxos essenciais funcionam sem JavaScript.
+- [ ] Conteúdo fornecido por usuário não executa HTML/JavaScript.
+- [ ] Não há recurso remoto obrigatório nem erro no console.
+- [ ] Testes TypeScript cobrem sucesso, timeout, cancelamento e cada classe de
+  resposta do cliente HTTP, além do adapter SweetAlert2.
+- [ ] Formulários são utilizáveis por teclado e comunicam erros a leitores de tela.
+- [ ] Gráficos não misturam moedas e não chamam fluxo líquido de lucro.
+- [ ] Gráfico por corretora fica ausente com zero ou uma instituição investida.
+- [ ] Bootstrap substitui integralmente o Tailwind da referência.
+
+## Riscos e mitigação
+
+- **Risco:** lógica de negócio migrar para TypeScript/template. →
+  **Mitigação:** frontend só apresenta; casos de uso e cálculos permanecem Rust.
+- **Risco:** dependência npm comprometer supply chain. → **Mitigação:** lockfile,
+  auditoria, assets locais e revisão de atualização.
+- **Risco:** um orquestrador HTTP virar framework interno. → **Mitigação:** API
+  pequena (`request/get/post/patch`), sem estado global ou regra de domínio.
