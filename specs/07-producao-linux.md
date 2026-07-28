@@ -2,7 +2,7 @@
 
 - **Status:** planejada
 - **Criado em:** 2026-07-25
-- **Última atualização:** 2026-07-25
+- **Última atualização:** 2026-07-28
 
 ## Objetivo
 
@@ -23,6 +23,28 @@ serviços do host e procedimentos de acesso não serão descritos neste
 repositório. Os limites equivalentes continuam obrigatórios na aplicação mesmo
 quando também existirem na infraestrutura.
 
+## Contrato público com Nginx
+
+Em produção, a aplicação Rust deve ficar atrás de Nginx ou gateway equivalente.
+Este repositório só documenta o contrato que a aplicação oferece para esse
+gateway:
+
+- escutar apenas em endereço privado/local definido por ambiente;
+- expor `GET /health/live` para vida do processo e `GET /health/ready` para
+  dependências essenciais;
+- aceitar `X-Request-Id` recebido do proxy ou gerar um identificador próprio;
+- emitir logs estruturados em stdout/stderr, sem tokens, cookies ou segredos;
+- aplicar limites internos de corpo, timeout e rate limit como segunda camada;
+- receber tráfego HTTPS já terminado pelo gateway e usar cookies seguros em
+  produção;
+- manter respostas previsíveis para `401`, `403`, `404`, `422`, `429` e `5xx`.
+
+Arquivos reais de vhost, `limit_req`, bloqueio de probes, Fail2ban, firewall,
+TLS, usuários, paths, SSH, rollback e reload do servidor pertencem ao
+repositório privado de infraestrutura. O padrão operacional a seguir é o mesmo
+dos projetos existentes no VPS: borda Nginx compartilhada, hardening no host,
+logs por serviço, deploy atômico e secrets fora da release.
+
 ## Tarefas
 
 - [ ] Manter Compose de produção, gateway HTTPS e proteção de entrada apenas no
@@ -30,6 +52,10 @@ quando também existirem na infraestrutura.
 - [ ] Criar endpoint DNS dedicado somente na configuração privada.
 - [ ] Integrar os controles compartilhados do host sem trazer scripts,
   parâmetros ou inventário para o repositório público.
+- [ ] Adaptar a infraestrutura privada ao contrato acima, usando Nginx como
+  reverse proxy e mantendo o app Rust inacessível diretamente pela Internet.
+- [ ] Seguir deploy atômico privado com artefato imutável, diretório
+  compartilhado para secrets/dados persistentes e troca controlada de versão.
 - [ ] Executar como usuário sem shell/root, filesystem read-only quando viável e
   diretórios de escrita explícitos.
 - [ ] Configurar TLS moderno, renovação automática e HSTS somente após HTTPS
@@ -48,6 +74,8 @@ quando também existirem na infraestrutura.
 - [ ] Automatizar backup PostgreSQL, retenção, criptografia e teste real de
   restauração em banco isolado.
 - [ ] Documentar deploy, rollback, rotação de chave, incidente e atualização.
+  A documentação pública deve ficar limitada ao contrato; o runbook concreto
+  fica privado.
 - [ ] Validar shutdown gracioso sem perder requisições em andamento.
 
 ## Critérios de aceitação

@@ -12,3 +12,14 @@
 node_modules/
 static/dist/
 static/vendor/
+
+# Private production/VPS material must not enter the public repository.
+scripts/nginx/
+scripts/security/
+scripts/ops/deploy.config
+scripts/ops/release-to-vps.sh
+scripts/ops/deploy-artifact.sh
+scripts/ops/*.local
+infra/
+deploy/
+*.local

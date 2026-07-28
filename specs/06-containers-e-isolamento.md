@@ -2,7 +2,7 @@
 
 - **Status:** planejada
 - **Criado em:** 2026-07-25
-- **Última atualização:** 2026-07-25
+- **Última atualização:** 2026-07-28
 
 ## Contexto e decisão
 
@@ -20,6 +20,12 @@ Compose de produção ficam num repositório privado de infraestrutura. Este
 repositório público contém apenas Dockerfile, build/scan da imagem, Compose de
 desenvolvimento e exemplos neutros.
 
+Quando hospedado no VPS existente, o container da aplicação deve se comportar
+como serviço interno atrás de Nginx. A imagem pública não conhece domínio,
+subdomínio, path remoto, regra de proxy, rede Docker real ou política do host.
+Esses detalhes são aplicados pela camada privada, no mesmo padrão operacional
+dos demais projetos, sem copiar scripts ou comentários internos para este Git.
+
 ## Fronteira entre repositórios
 
 | Público — aplicação | Privado — infraestrutura |
@@ -31,6 +37,7 @@ desenvolvimento e exemplos neutros.
 | `.env.example` vazio | secrets e arquivos de ambiente reais |
 | contrato de health/config | systemd, cron, backup e monitoramento |
 | testes de hardening da imagem | IP, domínio, SSH, users, paths e inventário |
+| contrato de porta/health/env | Nginx real, Fail2ban, firewall e reload |
 
 O repositório público não deve mencionar nomes, paths ou copiar comentários e
 scripts dos projetos privados. A infraestrutura privada consome a imagem como

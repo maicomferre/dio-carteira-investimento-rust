@@ -67,3 +67,6 @@ Validacoes obrigatorias do spike:
 - Deploy remoto, Nginx, Fail2ban, firewall, systemd, backup, paths, dominios,
   IPs e usuarios de servidor ficam fora do Git publico.
 - Mesmo VPS so sera usado apos preflight privado de capacidade e risco.
+- Se rodar no VPS existente, a aplicacao Rust fica atras do Nginx compartilhado
+  como servico interno. O contrato publico e health/config/log; vhost, regras de
+  borda, Fail2ban, firewall, deploy atomico e segredos ficam no ambiente privado.

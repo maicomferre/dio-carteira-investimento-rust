@@ -42,7 +42,9 @@ Top 10:2025, além de resiliência a abuso e falhas externas.
   - [x] Registro: limite por IP antes de acessar o banco.
   - [x] Mutações de carteira: limite por IP antes de CSRF/autorização nas rotas
     `POST`/`PATCH` de corretoras, ativos e movimentações.
-  - [ ] Global: definir se fica no proxy reverso, middleware Axum ou ambos.
+  - [ ] Global: usar duas camadas — proxy reverso privado para absorver abuso de
+    borda e middleware Axum para falha segura caso o proxy seja contornado ou
+    mal configurado.
 - [ ] Testar slow requests no proxy e saturação controlada da aplicação/DB.
 - [x] Aplicar CSP, HSTS no perfil HTTPS, nosniff, referrer/frame policy e
   `Cache-Control: no-store` em conteúdo autenticado.
@@ -51,6 +53,8 @@ Top 10:2025, além de resiliência a abuso e falhas externas.
 - [ ] Executar auditoria Rust/npm, licença, segredo e gerar SBOM.
 - [ ] Revisar cada item ASVS aplicável com evidência; justificar `N/A`.
 - [ ] Definir alertas para falhas repetidas de login, 429, 5xx e exaustão de pool.
+  Métricas e regras concretas do host ficam privadas; a aplicação pública deve
+  apenas emitir eventos suficientes para a camada operacional correlacionar.
 
 ## Critérios de aceitação
 
