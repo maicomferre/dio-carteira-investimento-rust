@@ -1,0 +1,19 @@
+{
+  "name": "carteira-de-investimentos-maicaosa",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc && npm run copy:assets",
+    "check": "tsc --noEmit",
+    "copy:assets": "mkdir -p static/vendor/bootstrap/css static/vendor/bootstrap/js static/vendor/bootstrap-icons/font/fonts static/vendor/sweetalert2 && cp node_modules/bootstrap/dist/css/bootstrap.min.css static/vendor/bootstrap/css/bootstrap.min.css && cp node_modules/bootstrap/dist/js/bootstrap.bundle.min.js static/vendor/bootstrap/js/bootstrap.bundle.min.js && cp node_modules/bootstrap-icons/font/bootstrap-icons.min.css static/vendor/bootstrap-icons/font/bootstrap-icons.min.css && cp node_modules/bootstrap-icons/font/fonts/bootstrap-icons.woff static/vendor/bootstrap-icons/font/fonts/bootstrap-icons.woff && cp node_modules/bootstrap-icons/font/fonts/bootstrap-icons.woff2 static/vendor/bootstrap-icons/font/fonts/bootstrap-icons.woff2 && cp node_modules/sweetalert2/dist/sweetalert2.min.css static/vendor/sweetalert2/sweetalert2.min.css && cp node_modules/sweetalert2/dist/sweetalert2.all.min.js static/vendor/sweetalert2/sweetalert2.all.min.js"
+  },
+  "dependencies": {
+    "bootstrap": "latest",
+    "bootstrap-icons": "latest",
+    "sweetalert2": "latest"
+  },
+  "devDependencies": {
+    "typescript": "latest"
+  }
+}

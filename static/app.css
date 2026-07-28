@@ -1,0 +1,36 @@
+.auth-shell {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+}
+
+.auth-card {
+  max-width: 28rem;
+  width: 100%;
+}
+
+.user-avatar {
+  align-items: center;
+  background: #0d6efd;
+  border-radius: 999px;
+  color: #fff;
+  display: inline-flex;
+  font-size: 0.875rem;
+  font-weight: 700;
+  height: 2.25rem;
+  justify-content: center;
+  width: 2.25rem;
+}
+
+.chart-box {
+  align-items: center;
+  display: flex;
+  justify-content: center;
+  min-height: 12rem;
+}
+
+.dashboard-donut {
+  max-height: 11rem;
+  max-width: 11rem;
+  transform: rotate(-90deg);
+}

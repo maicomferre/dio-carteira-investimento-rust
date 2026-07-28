@@ -11,3 +11,4 @@
 *.log
 node_modules/
 static/dist/
+static/vendor/
