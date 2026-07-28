@@ -34,7 +34,7 @@ TypeScript, mantendo HTML server-rendered e complexidade baixa.
   ou URL de avatar.
 - [ ] Implementar formulários acessíveis, labels, foco de erro, navegação por
   teclado e contraste; idioma padrão `pt-BR`.
-- [ ] Validar no cliente limites e formato para feedback imediato, mantendo a
+- [x] Validar no cliente limites e formato para feedback imediato, mantendo a
   mesma validação autoritativa no servidor.
 - [x] Exibir dashboard com posições e totais por moeda.
 - [x] Adicionar seletor BRL/USD e ocultar qualquer tentativa de somar moedas.
@@ -47,15 +47,18 @@ TypeScript, mantendo HTML server-rendered e complexidade baixa.
   houver movimentações; mostrar estado explicativo quando não houver dados.
 - [ ] Fornecer tabela/resumo textual equivalente aos gráficos para
   acessibilidade e fallback sem JavaScript.
-- [ ] Criar tela de extrato com filtros por período, ativo e tipo, além do botão
-  “Registrar movimentação”.
-- [ ] Criar tela “Corretoras” para cadastrar, editar e arquivar; não usar uma
+- [x] Criar tela de extrato e registro de compra/venda com seleção de ativo e
+  corretora.
+- [ ] Adicionar filtros do extrato por período, ativo e tipo.
+- [x] Criar tela “Corretoras” para cadastrar, editar e arquivar; não usar uma
   tela genérica de configurações no MVP.
-- [ ] No cadastro do ativo, buscar símbolo com debounce/cancelamento no backend,
-  exibir fonte/instante, permitir seleção inequívoca e manter modo manual.
-- [ ] No registro da movimentação, exigir corretora e mostrar a posição
+- [x] No cadastro do ativo, buscar símbolo com debounce no backend, permitir
+  seleção inequívoca e manter modo manual.
+- [ ] Adicionar cancelamento da busca de ativo e exibir instante da fonte.
+- [x] No registro da movimentação, exigir corretora.
+- [ ] No registro da movimentação, mostrar a posição
   disponível daquele ativo dentro dela.
-- [ ] Preservar valores seguros após erro e nunca preencher novamente senha.
+- [x] Preservar valores seguros após erro e nunca preencher novamente senha.
 - [ ] Definir CSP compatível com assets locais e eliminar `unsafe-inline`.
 - [ ] Verificar viewport móvel e navegadores modernos.
 
