@@ -47,6 +47,9 @@ pub struct AuthConfig {
     pub session_ttl_seconds: u64,
     pub cookie_secure: bool,
     pub allowed_origins: Vec<String>,
+    pub global_rate_limit_max_requests: u32,
+    pub global_rate_limit_window_seconds: u64,
+    pub global_rate_limit_block_seconds: u64,
     pub login_rate_limit_max_attempts: u32,
     pub login_rate_limit_window_seconds: u64,
     pub login_rate_limit_block_seconds: u64,
@@ -111,6 +114,21 @@ impl AppConfig {
             bail!("AUTH_ALLOWED_ORIGINS é obrigatório fora do ambiente development");
         }
 
+        let global_rate_limit_max_requests =
+            read_env_parse("AUTH_GLOBAL_RATE_LIMIT_MAX_REQUESTS", 300)?;
+        if !(10..=10_000).contains(&global_rate_limit_max_requests) {
+            bail!("AUTH_GLOBAL_RATE_LIMIT_MAX_REQUESTS deve ficar entre 10 e 10000");
+        }
+        let global_rate_limit_window_seconds =
+            read_env_parse("AUTH_GLOBAL_RATE_LIMIT_WINDOW_SECONDS", 60)?;
+        if !(10..=3_600).contains(&global_rate_limit_window_seconds) {
+            bail!("AUTH_GLOBAL_RATE_LIMIT_WINDOW_SECONDS deve ficar entre 10 e 3600");
+        }
+        let global_rate_limit_block_seconds =
+            read_env_parse("AUTH_GLOBAL_RATE_LIMIT_BLOCK_SECONDS", 300)?;
+        if !(30..=86_400).contains(&global_rate_limit_block_seconds) {
+            bail!("AUTH_GLOBAL_RATE_LIMIT_BLOCK_SECONDS deve ficar entre 30 e 86400");
+        }
         let login_rate_limit_max_attempts =
             read_env_parse("AUTH_LOGIN_RATE_LIMIT_MAX_ATTEMPTS", 5)?;
         if !(1..=20).contains(&login_rate_limit_max_attempts) {
@@ -206,6 +224,9 @@ impl AppConfig {
                 session_ttl_seconds,
                 cookie_secure,
                 allowed_origins,
+                global_rate_limit_max_requests,
+                global_rate_limit_window_seconds,
+                global_rate_limit_block_seconds,
                 login_rate_limit_max_attempts,
                 login_rate_limit_window_seconds,
                 login_rate_limit_block_seconds,

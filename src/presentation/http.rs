@@ -51,6 +51,7 @@ const MAX_BODY_BYTES: usize = 1024 * 1024;
 const SESSION_COOKIE_NAME: &str = "investment_session";
 const CSRF_COOKIE_NAME: &str = "investment_csrf";
 const CSRF_HEADER_NAME: &str = "x-csrf-token";
+const GLOBAL_RATE_LIMIT_SCOPE: &str = "global";
 const REGISTER_RATE_LIMIT_SCOPE: &str = "register";
 const MUTATION_RATE_LIMIT_SCOPE: &str = "portfolio_mutation";
 const CSP_POLICY: &str = concat!(
@@ -70,6 +71,7 @@ const CSP_POLICY: &str = concat!(
 pub struct AppState {
     pub pool: PgPool,
     pub auth: AuthConfig,
+    pub global_rate_limiter: IpRateLimiter,
     pub login_rate_limiter: LoginRateLimiter,
     pub register_rate_limiter: IpRateLimiter,
     pub mutation_rate_limiter: IpRateLimiter,
@@ -286,6 +288,11 @@ pub fn build_router(
     instrument_provider_config: InstrumentProviderConfig,
 ) -> Router {
     let request_id_header = HeaderName::from_static(REQUEST_ID_HEADER);
+    let global_rate_limiter = IpRateLimiter::new(
+        auth.global_rate_limit_max_requests,
+        Duration::from_secs(auth.global_rate_limit_window_seconds),
+        Duration::from_secs(auth.global_rate_limit_block_seconds),
+    );
     let login_rate_limiter = LoginRateLimiter::new(
         auth.login_rate_limit_max_attempts,
         Duration::from_secs(auth.login_rate_limit_window_seconds),
@@ -301,6 +308,16 @@ pub fn build_router(
         Duration::from_secs(auth.mutation_rate_limit_window_seconds),
         Duration::from_secs(auth.mutation_rate_limit_block_seconds),
     );
+
+    let state = AppState {
+        pool,
+        auth,
+        global_rate_limiter,
+        login_rate_limiter,
+        register_rate_limiter,
+        mutation_rate_limiter,
+        instrument_provider: CachedInstrumentProvider::new(instrument_provider_config),
+    };
 
     Router::new()
         .route("/", get(root))
@@ -328,19 +345,16 @@ pub fn build_router(
         .route("/api/transactions/sell", post(record_sale))
         .route("/api/portfolio/summary", get(portfolio_summary))
         .nest_service("/static", ServeDir::new("static"))
-        .with_state(AppState {
-            pool,
-            auth,
-            login_rate_limiter,
-            register_rate_limiter,
-            mutation_rate_limiter,
-            instrument_provider: CachedInstrumentProvider::new(instrument_provider_config),
-        })
+        .with_state(state.clone())
         .layer(PropagateRequestIdLayer::new(request_id_header.clone()))
         .layer(SetRequestIdLayer::new(request_id_header, MakeRequestUuid))
         .layer(TimeoutLayer::with_status_code(
             StatusCode::REQUEST_TIMEOUT,
             Duration::from_secs(10),
+        ))
+        .layer(axum::middleware::from_fn_with_state(
+            state,
+            global_rate_limit,
         ))
         .layer(axum::middleware::from_fn(security_headers))
         .layer(RequestBodyLimitLayer::new(MAX_BODY_BYTES))
@@ -349,6 +363,34 @@ pub fn build_router(
 
 async fn root() -> Redirect {
     Redirect::to("/dashboard")
+}
+
+async fn global_rate_limit(
+    State(state): State<AppState>,
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+    request: Request,
+    next: Next,
+) -> Result<Response, AppError> {
+    let path = request.uri().path();
+    if !is_global_rate_limit_exempt(path)
+        && let Err(error) = state
+            .global_rate_limiter
+            .check_and_record(addr.ip(), GLOBAL_RATE_LIMIT_SCOPE)
+            .await
+    {
+        tracing::warn!(
+            client_ip = %addr.ip(),
+            path,
+            "requisição bloqueada pelo rate limit global"
+        );
+        return Err(error);
+    }
+
+    Ok(next.run(request).await)
+}
+
+fn is_global_rate_limit_exempt(path: &str) -> bool {
+    matches!(path, "/health/live" | "/health/ready")
 }
 
 async fn login_page() -> Result<Html<String>, AppError> {
@@ -1192,6 +1234,9 @@ mod tests {
             session_ttl_seconds: 3_600,
             cookie_secure: false,
             allowed_origins: vec!["http://127.0.0.1:3000".to_owned()],
+            global_rate_limit_max_requests: 300,
+            global_rate_limit_window_seconds: 60,
+            global_rate_limit_block_seconds: 300,
             login_rate_limit_max_attempts: 5,
             login_rate_limit_window_seconds: 300,
             login_rate_limit_block_seconds: 900,
@@ -1297,5 +1342,13 @@ mod tests {
             response.headers().get(header::X_CONTENT_TYPE_OPTIONS),
             Some(&HeaderValue::from_static("nosniff"))
         );
+    }
+
+    #[test]
+    fn global_rate_limit_exempts_health_checks_only() {
+        assert!(is_global_rate_limit_exempt("/health/live"));
+        assert!(is_global_rate_limit_exempt("/health/ready"));
+        assert!(!is_global_rate_limit_exempt("/login"));
+        assert!(!is_global_rate_limit_exempt("/static/app.css"));
     }
 }

@@ -42,9 +42,10 @@ Top 10:2025, além de resiliência a abuso e falhas externas.
   - [x] Registro: limite por IP antes de acessar o banco.
   - [x] Mutações de carteira: limite por IP antes de CSRF/autorização nas rotas
     `POST`/`PATCH` de corretoras, ativos e movimentações.
-  - [ ] Global: usar duas camadas — proxy reverso privado para absorver abuso de
+  - [x] Global: usar duas camadas — proxy reverso privado para absorver abuso de
     borda e middleware Axum para falha segura caso o proxy seja contornado ou
-    mal configurado.
+    mal configurado. O middleware interno limita por IP e isenta somente
+    `/health/live` e `/health/ready`.
 - [ ] Testar slow requests no proxy e saturação controlada da aplicação/DB.
 - [x] Aplicar CSP, HSTS no perfil HTTPS, nosniff, referrer/frame policy e
   `Cache-Control: no-store` em conteúdo autenticado.
