@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Movimentações | Carteira de Investimentos</title>
+    <link rel="stylesheet" href="/static/vendor/bootstrap/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/static/vendor/bootstrap-icons/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="/static/vendor/sweetalert2/sweetalert2.min.css">
+    <link rel="stylesheet" href="/static/app.css">
+  </head>
+  <body>
+    <header class="border-bottom bg-white">
+      <nav class="container py-3 d-flex align-items-center justify-content-between">
+        <a class="navbar-brand fw-semibold" href="/dashboard">Carteira de Investimentos</a>
+        <div class="d-flex align-items-center gap-3">
+          <a class="btn btn-outline-primary btn-sm" href="/dashboard"><i class="bi bi-speedometer2"></i> Dashboard</a>
+          <a class="btn btn-outline-primary btn-sm" href="/brokers"><i class="bi bi-bank"></i> Corretoras</a>
+          <a class="btn btn-outline-primary btn-sm" href="/assets"><i class="bi bi-graph-up-arrow"></i> Ativos</a>
+          <a class="btn btn-primary btn-sm" href="/transactions"><i class="bi bi-list-check"></i> Movimentações</a>
+          <span class="user-avatar" aria-label="Usuário {{ user.username }}">{{ user.initials }}</span>
+          <form method="post" action="/logout" data-logout-form>
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <button class="btn btn-outline-secondary btn-sm" type="submit">Sair</button>
+          </form>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container py-4" data-transactions-page>
+      <div class="d-flex flex-wrap align-items-end justify-content-between gap-3 mb-4">
+        <div>
+          <p class="text-uppercase text-primary small mb-1">Movimentações</p>
+          <h1 class="h3 mb-0">Extrato de compras e vendas</h1>
+          <p class="text-muted mb-0">Registre operações por ativo e corretora; o backend valida posição em vendas.</p>
+        </div>
+      </div>
+
+      <section class="row g-3">
+        <div class="col-12 col-lg-4">
+          <article class="card shadow-sm">
+            <div class="card-body">
+              <h2 class="h5">Nova movimentação</h2>
+              <form data-transaction-form>
+                <div class="mb-3">
+                  <label class="form-label" for="transaction-type">Tipo</label>
+                  <select class="form-select" id="transaction-type" name="transaction_type" required>
+                    <option value="buy">Compra</option>
+                    <option value="sell">Venda</option>
+                  </select>
+                </div>
+                <div class="mb-3">
+                  <label class="form-label" for="transaction-asset">Ativo</label>
+                  <select class="form-select" id="transaction-asset" name="asset_id" required data-asset-select></select>
+                </div>
+                <div class="mb-3">
+                  <label class="form-label" for="transaction-broker">Corretora</label>
+                  <select class="form-select" id="transaction-broker" name="broker_id" required data-broker-select></select>
+                </div>
+                <div class="row g-2">
+                  <div class="col-md-6 mb-3">
+                    <label class="form-label" for="transaction-quantity">Quantidade</label>
+                    <input class="form-control" id="transaction-quantity" name="quantity" inputmode="decimal" required placeholder="100">
+                  </div>
+                  <div class="col-md-6 mb-3">
+                    <label class="form-label" for="transaction-price">Preço unitário</label>
+                    <input class="form-control" id="transaction-price" name="unit_price" inputmode="decimal" required placeholder="38.42">
+                  </div>
+                </div>
+                <div class="row g-2">
+                  <div class="col-md-6 mb-3">
+                    <label class="form-label" for="transaction-fees">Taxas</label>
+                    <input class="form-control" id="transaction-fees" name="fees" inputmode="decimal" placeholder="0">
+                  </div>
+                  <div class="col-md-6 mb-3">
+                    <label class="form-label" for="transaction-date">Data</label>
+                    <input class="form-control" id="transaction-date" name="occurred_at" type="date">
+                  </div>
+                </div>
+                <div class="mb-3">
+                  <label class="form-label" for="transaction-notes">Observação</label>
+                  <textarea class="form-control" id="transaction-notes" name="notes" maxlength="500" rows="2"></textarea>
+                </div>
+                <button class="btn btn-primary w-100" type="submit">Registrar movimentação</button>
+              </form>
+            </div>
+          </article>
+        </div>
+        <div class="col-12 col-lg-8">
+          <article class="card shadow-sm">
+            <div class="card-body">
+              <h2 class="h5">Extrato</h2>
+              <div class="table-responsive">
+                <table class="table align-middle">
+                  <thead>
+                    <tr>
+                      <th>Data</th>
+                      <th>Tipo</th>
+                      <th>Ativo</th>
+                      <th>Corretora</th>
+                      <th class="text-end">Quantidade</th>
+                      <th class="text-end">Preço</th>
+                      <th class="text-end">Taxas</th>
+                    </tr>
+                  </thead>
+                  <tbody data-transaction-list>
+                    <tr><td colspan="7">Carregando...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </article>
+        </div>
+      </section>
+      <div class="visually-hidden" aria-live="polite" data-live-region></div>
+    </main>
+
+    <footer class="border-top mt-5 py-3 text-center text-muted small">
+      Carteira de Investimentos — projeto educacional DIO/Santander.
+    </footer>
+
+    <script src="/static/vendor/bootstrap/js/bootstrap.bundle.min.js" defer></script>
+    <script src="/static/vendor/sweetalert2/sweetalert2.all.min.js" defer></script>
+    <script type="module" src="/static/dist/app.js"></script>
+  </body>
+</html>

@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Ativos | Carteira de Investimentos</title>
+    <link rel="stylesheet" href="/static/vendor/bootstrap/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/static/vendor/bootstrap-icons/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="/static/vendor/sweetalert2/sweetalert2.min.css">
+    <link rel="stylesheet" href="/static/app.css">
+  </head>
+  <body>
+    <header class="border-bottom bg-white">
+      <nav class="container py-3 d-flex align-items-center justify-content-between">
+        <a class="navbar-brand fw-semibold" href="/dashboard">Carteira de Investimentos</a>
+        <div class="d-flex align-items-center gap-3">
+          <a class="btn btn-outline-primary btn-sm" href="/dashboard"><i class="bi bi-speedometer2"></i> Dashboard</a>
+          <a class="btn btn-outline-primary btn-sm" href="/brokers"><i class="bi bi-bank"></i> Corretoras</a>
+          <a class="btn btn-primary btn-sm" href="/assets"><i class="bi bi-graph-up-arrow"></i> Ativos</a>
+          <a class="btn btn-outline-primary btn-sm" href="/transactions"><i class="bi bi-list-check"></i> Movimentações</a>
+          <span class="user-avatar" aria-label="Usuário {{ user.username }}">{{ user.initials }}</span>
+          <form method="post" action="/logout" data-logout-form>
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <button class="btn btn-outline-secondary btn-sm" type="submit">Sair</button>
+          </form>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container py-4" data-assets-page>
+      <div class="d-flex flex-wrap align-items-end justify-content-between gap-3 mb-4">
+        <div>
+          <p class="text-uppercase text-primary small mb-1">Ativos</p>
+          <h1 class="h3 mb-0">Cadastro de instrumentos</h1>
+          <p class="text-muted mb-0">Use busca por símbolo quando disponível ou preencha manualmente.</p>
+        </div>
+      </div>
+
+      <section class="row g-3">
+        <div class="col-12 col-lg-5">
+          <article class="card shadow-sm">
+            <div class="card-body">
+              <h2 class="h5">Novo ativo</h2>
+              <form data-asset-form>
+                <div class="mb-3">
+                  <label class="form-label" for="asset-symbol">Símbolo</label>
+                  <input class="form-control text-uppercase" id="asset-symbol" name="symbol" maxlength="32" required placeholder="PETR4">
+                  <div class="form-text" data-instrument-status>Digite ao menos 2 caracteres para consultar metadados locais.</div>
+                  <div class="list-group mt-2" data-instrument-suggestions></div>
+                </div>
+                <div class="mb-3">
+                  <label class="form-label" for="asset-name">Nome</label>
+                  <input class="form-control" id="asset-name" name="name" maxlength="160" required>
+                </div>
+                <div class="row g-2">
+                  <div class="col-md-6 mb-3">
+                    <label class="form-label" for="asset-market">Mercado</label>
+                    <select class="form-select" id="asset-market" name="market" required>
+                      <option value="B3">B3</option>
+                      <option value="NASDAQ">NASDAQ</option>
+                      <option value="NYSE">NYSE</option>
+                      <option value="CRYPTO">CRYPTO</option>
+                      <option value="OTHER">OTHER</option>
+                    </select>
+                  </div>
+                  <div class="col-md-6 mb-3">
+                    <label class="form-label" for="asset-category">Categoria</label>
+                    <select class="form-select" id="asset-category" name="category" required>
+                      <option value="STOCK">STOCK</option>
+                      <option value="FII">FII</option>
+                      <option value="ETF">ETF</option>
+                      <option value="BDR">BDR</option>
+                      <option value="CRYPTO">CRYPTO</option>
+                      <option value="OTHER">OTHER</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="row g-2">
+                  <div class="col-md-6 mb-3">
+                    <label class="form-label" for="asset-currency">Moeda</label>
+                    <select class="form-select" id="asset-currency" name="currency" required>
+                      <option value="BRL">BRL</option>
+                      <option value="USD">USD</option>
+                    </select>
+                  </div>
+                  <div class="col-md-6 mb-3">
+                    <label class="form-label" for="asset-price">Preço atual</label>
+                    <input class="form-control" id="asset-price" name="current_price" inputmode="decimal" required placeholder="38.42">
+                  </div>
+                </div>
+                <div class="d-grid gap-2">
+                  <button class="btn btn-primary" type="submit" data-asset-submit>Cadastrar ativo</button>
+                  <button class="btn btn-outline-secondary" type="button" data-asset-cancel hidden>Cancelar edição</button>
+                </div>
+              </form>
+            </div>
+          </article>
+        </div>
+        <div class="col-12 col-lg-7">
+          <article class="card shadow-sm">
+            <div class="card-body">
+              <h2 class="h5">Ativos cadastrados</h2>
+              <div class="table-responsive">
+                <table class="table align-middle">
+                  <thead>
+                    <tr>
+                      <th>Símbolo</th>
+                      <th>Nome</th>
+                      <th>Mercado</th>
+                      <th>Moeda</th>
+                      <th class="text-end">Preço</th>
+                      <th class="text-end">Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody data-asset-list>
+                    <tr><td colspan="6">Carregando...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </article>
+        </div>
+      </section>
+      <div class="visually-hidden" aria-live="polite" data-live-region></div>
+    </main>
+
+    <footer class="border-top mt-5 py-3 text-center text-muted small">
+      Carteira de Investimentos — projeto educacional DIO/Santander.
+    </footer>
+
+    <script src="/static/vendor/bootstrap/js/bootstrap.bundle.min.js" defer></script>
+    <script src="/static/vendor/sweetalert2/sweetalert2.all.min.js" defer></script>
+    <script type="module" src="/static/dist/app.js"></script>
+  </body>
+</html>

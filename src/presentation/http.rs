@@ -178,6 +178,27 @@ struct DashboardTemplate {
     csrf_token: String,
 }
 
+#[derive(Template)]
+#[template(path = "brokers.html")]
+struct BrokersTemplate {
+    user: PageUser,
+    csrf_token: String,
+}
+
+#[derive(Template)]
+#[template(path = "assets.html")]
+struct AssetsTemplate {
+    user: PageUser,
+    csrf_token: String,
+}
+
+#[derive(Template)]
+#[template(path = "transactions.html")]
+struct TransactionsTemplate {
+    user: PageUser,
+    csrf_token: String,
+}
+
 #[derive(Debug, Serialize)]
 struct TransactionListResponse {
     transactions: Vec<PublicTransaction>,
@@ -260,6 +281,9 @@ pub fn build_router(
         .route("/register", get(register_page).post(register_form))
         .route("/logout", post(logout_form))
         .route("/dashboard", get(dashboard_page))
+        .route("/brokers", get(brokers_page))
+        .route("/assets", get(assets_page))
+        .route("/transactions", get(transactions_page))
         .route("/health/live", get(liveness))
         .route("/health/ready", get(readiness))
         .route("/auth/register", post(register))
@@ -309,7 +333,55 @@ async fn dashboard_page(
     State(state): State<AppState>,
     headers: HeaderMap,
 ) -> Result<Response, AppError> {
-    let user = match authenticated_user(&state, &headers).await {
+    render_authenticated_template(&state, &headers, |user, csrf_token| DashboardTemplate {
+        user,
+        csrf_token,
+    })
+    .await
+}
+
+async fn brokers_page(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Response, AppError> {
+    render_authenticated_template(&state, &headers, |user, csrf_token| BrokersTemplate {
+        user,
+        csrf_token,
+    })
+    .await
+}
+
+async fn assets_page(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Response, AppError> {
+    render_authenticated_template(&state, &headers, |user, csrf_token| AssetsTemplate {
+        user,
+        csrf_token,
+    })
+    .await
+}
+
+async fn transactions_page(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Response, AppError> {
+    render_authenticated_template(&state, &headers, |user, csrf_token| TransactionsTemplate {
+        user,
+        csrf_token,
+    })
+    .await
+}
+
+async fn render_authenticated_template<T>(
+    state: &AppState,
+    headers: &HeaderMap,
+    template: impl FnOnce(PageUser, String) -> T,
+) -> Result<Response, AppError>
+where
+    T: Template,
+{
+    let user = match authenticated_user(state, headers).await {
         Ok(user) => user,
         Err(AppError::Unauthorized | AppError::InvalidCredentials) => {
             return Ok(Redirect::to("/login").into_response());
@@ -317,16 +389,15 @@ async fn dashboard_page(
         Err(error) => return Err(error),
     };
 
-    Ok(render_template(DashboardTemplate {
-        user: PageUser {
-            initials: username_initials(&user.username),
-            username: user.username,
-        },
-        csrf_token: extract_cookie(&headers, CSRF_COOKIE_NAME)
-            .unwrap_or_default()
-            .to_owned(),
-    })?
-    .into_response())
+    let page_user = PageUser {
+        initials: username_initials(&user.username),
+        username: user.username,
+    };
+    let csrf_token = extract_cookie(headers, CSRF_COOKIE_NAME)
+        .unwrap_or_default()
+        .to_owned();
+
+    Ok(render_template(template(page_user, csrf_token))?.into_response())
 }
 
 async fn login_form(
