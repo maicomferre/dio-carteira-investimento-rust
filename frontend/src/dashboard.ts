@@ -125,13 +125,16 @@ function renderCurrency(
 
 function renderDonut(root: HTMLElement, selector: string, items: Array<{ category: string; total: string }>): void {
   const target = root.querySelector<HTMLElement>(selector);
+  const fallback = root.querySelector<HTMLElement>("[data-category-fallback]");
   if (target === null) return;
   if (items.length === 0) {
     target.textContent = "Sem posições para exibir.";
+    fallback?.replaceChildren();
     return;
   }
 
   target.replaceChildren(svgDonut(items.map((item) => ({ label: item.category, value: Number(item.total) }))));
+  renderFallbackList(fallback, items.map((item) => ({ label: item.category, value: item.total })));
 }
 
 function renderBrokerDonut(root: HTMLElement, items: BrokerAllocation[], brokerLabels: Map<string, string>): void {
@@ -146,6 +149,10 @@ function renderBrokerDonut(root: HTMLElement, items: BrokerAllocation[], brokerL
 
   section.hidden = false;
   target.replaceChildren(svgDonut(items.map((item) => ({ label: brokerLabels.get(item.broker_id) ?? shortId(item.broker_id), value: Number(item.total) }))));
+  renderFallbackList(
+    root.querySelector<HTMLElement>("[data-broker-fallback]"),
+    items.map((item) => ({ label: brokerLabels.get(item.broker_id) ?? shortId(item.broker_id), value: item.total })),
+  );
 }
 
 function renderBars(
@@ -209,6 +216,7 @@ function svgDonut(items: Array<{ label: string; value: number }>): SVGSVGElement
   const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
   svg.setAttribute("viewBox", "0 0 42 42");
   svg.setAttribute("role", "img");
+  svg.setAttribute("aria-label", donutLabel(items));
   svg.setAttribute("class", "dashboard-donut");
   const total = items.reduce((sum, item) => sum + item.value, 0);
   let offset = 25;
@@ -231,6 +239,31 @@ function svgDonut(items: Array<{ label: string; value: number }>): SVGSVGElement
   });
 
   return svg;
+}
+
+function renderFallbackList(target: HTMLElement | null, items: Array<{ label: string; value: string }>): void {
+  if (target === null) return;
+  const total = items.reduce((sum, item) => sum + Number(item.value), 0);
+  target.replaceChildren(
+    ...items
+      .filter((item) => Number(item.value) > 0)
+      .map((item) => {
+        const percent = total === 0 ? 0 : (Number(item.value) / total) * 100;
+        const row = document.createElement("li");
+        row.className = "list-group-item d-flex justify-content-between px-0";
+        row.append(textSpan(item.label), textSpan(`${percent.toFixed(1)}%`));
+        return row;
+      }),
+  );
+}
+
+function donutLabel(items: Array<{ label: string; value: number }>): string {
+  const total = items.reduce((sum, item) => sum + item.value, 0);
+  if (total <= 0) return "Gráfico sem dados";
+  return items
+    .filter((item) => item.value > 0)
+    .map((item) => `${item.label}: ${((item.value / total) * 100).toFixed(1)}%`)
+    .join("; ");
 }
 
 function money(value: string, currency: string): string {

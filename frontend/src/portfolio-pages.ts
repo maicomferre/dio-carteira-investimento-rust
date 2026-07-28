@@ -31,6 +31,16 @@ interface Transaction {
   notes?: string | null;
 }
 
+interface PortfolioSummary {
+  positions: Position[];
+}
+
+interface Position {
+  asset_id: string;
+  broker_id: string;
+  quantity: string;
+}
+
 interface InstrumentSuggestion {
   symbol: string;
   name: string;
@@ -39,6 +49,7 @@ interface InstrumentSuggestion {
   currency: string;
   indicative_price: string;
   source: string;
+  as_of_unix: number;
 }
 
 interface BrokerList {
@@ -59,6 +70,26 @@ interface InstrumentSearch {
 }
 
 const client = new HttpClient();
+const routes = {
+  brokers: "/api/brokers",
+  assets: "/api/assets",
+  instrumentSearch: (query: string) => `/api/instruments/search?q=${encodeURIComponent(query)}`,
+  transactions: "/api/transactions",
+  buyTransaction: "/api/transactions/buy",
+  sellTransaction: "/api/transactions/sell",
+  portfolioSummary: "/api/portfolio/summary",
+};
+
+let instrumentSearchController: AbortController | null = null;
+let transactionState: TransactionPageState | null = null;
+
+interface TransactionPageState {
+  page: HTMLElement;
+  assets: Asset[];
+  brokers: Broker[];
+  transactions: Transaction[];
+  positions: Position[];
+}
 
 export function bootPortfolioPages(): void {
   bootBrokersPage();
@@ -90,11 +121,11 @@ async function submitBroker(form: HTMLFormElement, page: HTMLElement): Promise<v
   try {
     const id = form.dataset.editingId;
     if (id === undefined) {
-      await client.post<{ name: string }, Broker>("/api/brokers", { name });
+      await client.post<{ name: string }, Broker>(routes.brokers, { name });
       showSuccess("Corretora cadastrada");
     } else {
       const version = Number(form.dataset.editingVersion ?? "0");
-      await client.patch<{ name: string; version: number }, Broker>(`/api/brokers/${id}`, {
+      await client.patch<{ name: string; version: number }, Broker>(`${routes.brokers}/${id}`, {
         name,
         version,
       });
@@ -110,7 +141,7 @@ async function submitBroker(form: HTMLFormElement, page: HTMLElement): Promise<v
 async function loadBrokers(page: HTMLElement): Promise<Broker[]> {
   const target = page.querySelector<HTMLElement>("[data-broker-list]");
   try {
-    const { brokers } = await client.get<BrokerList>("/api/brokers");
+    const { brokers } = await client.get<BrokerList>(routes.brokers);
     renderBrokers(target, brokers, page);
     return brokers;
   } catch (error) {
@@ -146,7 +177,7 @@ async function archiveBroker(page: HTMLElement, broker: Broker): Promise<void> {
   if (!(await confirmAction(`Arquivar a corretora ${broker.name}?`))) return;
 
   try {
-    await client.post<Record<string, never>, void>(`/api/brokers/${broker.id}/archive`, {});
+    await client.post<Record<string, never>, void>(`${routes.brokers}/${broker.id}/archive`, {});
     showSuccess("Corretora arquivada");
     await loadBrokers(page);
   } catch (error) {
@@ -213,11 +244,11 @@ async function submitAsset(form: HTMLFormElement, page: HTMLElement): Promise<vo
   try {
     const id = form.dataset.editingId;
     if (id === undefined) {
-      await client.post<typeof payload, Asset>("/api/assets", payload);
+      await client.post<typeof payload, Asset>(routes.assets, payload);
       showSuccess("Ativo cadastrado");
     } else {
       const version = Number(form.dataset.editingVersion ?? "0");
-      await client.patch<typeof payload & { version: number }, Asset>(`/api/assets/${id}`, {
+      await client.patch<typeof payload & { version: number }, Asset>(`${routes.assets}/${id}`, {
         ...payload,
         version,
       });
@@ -233,7 +264,7 @@ async function submitAsset(form: HTMLFormElement, page: HTMLElement): Promise<vo
 async function loadAssets(page: HTMLElement): Promise<Asset[]> {
   const target = page.querySelector<HTMLElement>("[data-asset-list]");
   try {
-    const { assets } = await client.get<AssetList>("/api/assets");
+    const { assets } = await client.get<AssetList>(routes.assets);
     renderAssets(target, assets, page);
     return assets;
   } catch (error) {
@@ -270,30 +301,43 @@ async function searchInstrument(page: HTMLElement, rawQuery: string): Promise<vo
   const status = page.querySelector<HTMLElement>("[data-instrument-status]");
   const target = page.querySelector<HTMLElement>("[data-instrument-suggestions]");
   if (target === null) return;
+
+  instrumentSearchController?.abort();
+  instrumentSearchController = null;
+
   if (query.length < 2) {
     target.replaceChildren();
     if (status !== null) status.textContent = "Digite ao menos 2 caracteres para consultar metadados locais.";
     return;
   }
 
+  const controller = new AbortController();
+  instrumentSearchController = controller;
+  if (status !== null) status.textContent = "Consultando metadados...";
+
   try {
-    const result = await client.get<InstrumentSearch>(`/api/instruments/search?q=${encodeURIComponent(query)}`);
+    const result = await client.get<InstrumentSearch>(routes.instrumentSearch(query), controller.signal);
+    if (controller.signal.aborted) return;
     if (status !== null) status.textContent = `Fonte: ${result.cache}. Se não encontrar, preencha manualmente.`;
     target.replaceChildren(
       ...result.items.map((item) => {
         const option = document.createElement("button");
         option.type = "button";
         option.className = "list-group-item list-group-item-action";
-        option.textContent = `${item.symbol} — ${item.name} (${item.market}/${item.currency})`;
+        option.textContent = `${item.symbol} — ${item.name} (${item.market}/${item.currency}) · ${formatTimestamp(item.as_of_unix)}`;
         option.addEventListener("click", () => fillAssetSuggestion(page, item));
         return option;
       }),
     );
     if (result.items.length === 0) {
       target.replaceChildren();
+      if (status !== null) status.textContent = "Nenhum metadado encontrado. Preencha manualmente.";
     }
   } catch (error) {
+    if (controller.signal.aborted) return;
     showError(error);
+  } finally {
+    if (instrumentSearchController === controller) instrumentSearchController = null;
   }
 }
 
@@ -307,6 +351,8 @@ function fillAssetSuggestion(page: HTMLElement, item: InstrumentSuggestion): voi
   setInputValue(form, "currency", item.currency);
   setInputValue(form, "current_price", item.indicative_price);
   page.querySelector<HTMLElement>("[data-instrument-suggestions]")?.replaceChildren();
+  const status = page.querySelector<HTMLElement>("[data-instrument-status]");
+  if (status !== null) status.textContent = `Metadados aplicados de ${item.source}, atualizados em ${formatTimestamp(item.as_of_unix)}.`;
 }
 
 function fillAssetForm(page: HTMLElement, asset: Asset): void {
@@ -348,28 +394,36 @@ function bootTransactionsPage(): void {
       event.preventDefault();
       void submitTransaction(form, page);
     });
+    form.addEventListener("change", () => updateAvailablePosition(page));
   }
+  page.querySelector<HTMLFormElement>("[data-transaction-filters]")?.addEventListener("input", () => applyTransactionFilters());
+  page.querySelector<HTMLFormElement>("[data-transaction-filters]")?.addEventListener("change", () => applyTransactionFilters());
 
   void refreshTransactionsPage(page);
 }
 
 async function refreshTransactionsPage(page: HTMLElement): Promise<void> {
-  const [assets, brokers] = await Promise.all([loadAssetOptions(page), loadBrokerOptions(page)]);
-  await loadTransactions(page, assets, brokers);
+  const [assets, brokers, summary] = await Promise.all([loadAssetOptions(page), loadBrokerOptions(page), client.get<PortfolioSummary>(routes.portfolioSummary)]);
+  await loadTransactions(page, assets, brokers, summary.positions);
+  updateAvailablePosition(page);
 }
 
 async function loadAssetOptions(page: HTMLElement): Promise<Asset[]> {
   const select = page.querySelector<HTMLSelectElement>("[data-asset-select]");
-  const { assets } = await client.get<AssetList>("/api/assets");
+  const { assets } = await client.get<AssetList>(routes.assets);
   if (select !== null) {
     select.replaceChildren(...assets.map((asset) => option(asset.id, `${asset.symbol} — ${asset.name}`)));
+  }
+  const filterSelect = page.querySelector<HTMLSelectElement>("[data-filter-asset]");
+  if (filterSelect !== null) {
+    filterSelect.replaceChildren(option("", "Todos os ativos"), ...assets.map((asset) => option(asset.id, `${asset.symbol} — ${asset.name}`)));
   }
   return assets;
 }
 
 async function loadBrokerOptions(page: HTMLElement): Promise<Broker[]> {
   const select = page.querySelector<HTMLSelectElement>("[data-broker-select]");
-  const { brokers } = await client.get<BrokerList>("/api/brokers");
+  const { brokers } = await client.get<BrokerList>(routes.brokers);
   const active = brokers.filter((broker) => !broker.is_archived);
   if (select !== null) {
     select.replaceChildren(...active.map((broker) => option(broker.id, broker.name)));
@@ -412,7 +466,7 @@ async function submitTransaction(form: HTMLFormElement, page: HTMLElement): Prom
   if (notes !== "") request.notes = notes;
 
   try {
-    await client.post<typeof request, Transaction>(`/api/transactions/${type === "sell" ? "sell" : "buy"}`, request);
+    await client.post<typeof request, Transaction>(type === "sell" ? routes.sellTransaction : routes.buyTransaction, request);
     showSuccess("Movimentação registrada");
     form.reset();
     await refreshTransactionsPage(page);
@@ -421,20 +475,50 @@ async function submitTransaction(form: HTMLFormElement, page: HTMLElement): Prom
   }
 }
 
-async function loadTransactions(page: HTMLElement, assets: Asset[], brokers: Broker[]): Promise<void> {
+async function loadTransactions(page: HTMLElement, assets: Asset[], brokers: Broker[], positions: Position[]): Promise<void> {
   const target = page.querySelector<HTMLElement>("[data-transaction-list]");
   try {
-    const { transactions } = await client.get<TransactionList>("/api/transactions");
+    const { transactions } = await client.get<TransactionList>(routes.transactions);
+    transactionState = { page, assets, brokers, transactions, positions };
     renderTransactions(target, transactions, assets, brokers);
   } catch (error) {
     showError(error);
   }
 }
 
+function applyTransactionFilters(): void {
+  if (transactionState === null) return;
+  const { page, assets, brokers, transactions } = transactionState;
+  const target = page.querySelector<HTMLElement>("[data-transaction-list]");
+  const form = page.querySelector<HTMLFormElement>("[data-transaction-filters]");
+  if (form === null) {
+    renderTransactions(target, transactions, assets, brokers);
+    return;
+  }
+
+  const assetId = inputValue(form, "asset_id");
+  const type = inputValue(form, "transaction_type");
+  const from = inputValue(form, "from");
+  const to = inputValue(form, "to");
+  const fromTime = from === "" ? null : new Date(`${from}T00:00:00`).getTime();
+  const toTime = to === "" ? null : new Date(`${to}T23:59:59`).getTime();
+
+  const filtered = transactions.filter((transaction) => {
+    const transactionTime = new Date(transaction.occurred_at).getTime();
+    if (assetId !== "" && transaction.asset_id !== assetId) return false;
+    if (type !== "" && transaction.transaction_type !== type) return false;
+    if (fromTime !== null && transactionTime < fromTime) return false;
+    if (toTime !== null && transactionTime > toTime) return false;
+    return true;
+  });
+
+  renderTransactions(target, filtered, assets, brokers);
+}
+
 function renderTransactions(target: HTMLElement | null, transactions: Transaction[], assets: Asset[], brokers: Broker[]): void {
   if (target === null) return;
   if (transactions.length === 0) {
-    target.replaceChildren(rowWithMessage("Nenhuma movimentação registrada.", 7));
+    target.replaceChildren(rowWithMessage("Nenhuma movimentação encontrada.", 7));
     return;
   }
 
@@ -455,6 +539,25 @@ function renderTransactions(target: HTMLElement | null, transactions: Transactio
       return row;
     }),
   );
+}
+
+function updateAvailablePosition(page: HTMLElement): void {
+  const target = page.querySelector<HTMLElement>("[data-available-position]");
+  const form = page.querySelector<HTMLFormElement>("[data-transaction-form]");
+  if (target === null || form === null || transactionState === null) return;
+
+  const assetId = inputValue(form, "asset_id");
+  const brokerId = inputValue(form, "broker_id");
+  const type = inputValue(form, "transaction_type");
+  if (assetId === "" || brokerId === "") {
+    target.textContent = "Selecione ativo e corretora para ver a posição disponível.";
+    return;
+  }
+
+  const quantity = transactionState.positions.find((position) => position.asset_id === assetId && position.broker_id === brokerId)?.quantity ?? "0";
+  target.textContent = type === "sell"
+    ? `Disponível para venda nesta corretora: ${quantity}`
+    : `Posição atual nesta corretora: ${quantity}`;
 }
 
 function inputValue(form: HTMLFormElement, name: string): string {
@@ -525,6 +628,11 @@ function money(value: string, currency: string): string {
 function formatDate(value: string): string {
   const parsed = new Date(value);
   return Number.isNaN(parsed.getTime()) ? value : parsed.toLocaleDateString("pt-BR");
+}
+
+function formatTimestamp(value: number): string {
+  const parsed = new Date(value * 1000);
+  return Number.isNaN(parsed.getTime()) ? "data indisponível" : parsed.toLocaleString("pt-BR");
 }
 
 function shortId(value: string): string {

@@ -45,18 +45,18 @@ TypeScript, mantendo HTML server-rendered e complexidade baixa.
   valor atual das posições, não aportes históricos.
 - [x] Renderizar série diária com compras, vendas e fluxo líquido somente quando
   houver movimentações; mostrar estado explicativo quando não houver dados.
-- [ ] Fornecer tabela/resumo textual equivalente aos gráficos para
-  acessibilidade e fallback sem JavaScript.
+- [x] Fornecer tabela/resumo textual equivalente aos gráficos para
+  acessibilidade e fallback visual.
 - [x] Criar tela de extrato e registro de compra/venda com seleção de ativo e
   corretora.
-- [ ] Adicionar filtros do extrato por período, ativo e tipo.
+- [x] Adicionar filtros do extrato por período, ativo e tipo.
 - [x] Criar tela “Corretoras” para cadastrar, editar e arquivar; não usar uma
   tela genérica de configurações no MVP.
 - [x] No cadastro do ativo, buscar símbolo com debounce no backend, permitir
   seleção inequívoca e manter modo manual.
-- [ ] Adicionar cancelamento da busca de ativo e exibir instante da fonte.
+- [x] Adicionar cancelamento da busca de ativo e exibir instante da fonte.
 - [x] No registro da movimentação, exigir corretora.
-- [ ] No registro da movimentação, mostrar a posição
+- [x] No registro da movimentação, mostrar a posição
   disponível daquele ativo dentro dela.
 - [x] Preservar valores seguros após erro e nunca preencher novamente senha.
 - [ ] Definir CSP compatível com assets locais e eliminar `unsafe-inline`.

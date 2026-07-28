@@ -56,6 +56,7 @@
                 <div class="mb-3">
                   <label class="form-label" for="transaction-broker">Corretora</label>
                   <select class="form-select" id="transaction-broker" name="broker_id" required data-broker-select></select>
+                  <div class="form-text" data-available-position>Selecione ativo e corretora para ver a posição disponível.</div>
                 </div>
                 <div class="row g-2">
                   <div class="col-md-6 mb-3">
@@ -90,6 +91,30 @@
           <article class="card shadow-sm">
             <div class="card-body">
               <h2 class="h5">Extrato</h2>
+              <form class="row g-2 align-items-end mb-3" data-transaction-filters>
+                <div class="col-12 col-md-4">
+                  <label class="form-label" for="filter-asset">Ativo</label>
+                  <select class="form-select form-select-sm" id="filter-asset" name="asset_id" data-filter-asset>
+                    <option value="">Todos os ativos</option>
+                  </select>
+                </div>
+                <div class="col-6 col-md-2">
+                  <label class="form-label" for="filter-type">Tipo</label>
+                  <select class="form-select form-select-sm" id="filter-type" name="transaction_type">
+                    <option value="">Todos</option>
+                    <option value="BUY">Compra</option>
+                    <option value="SELL">Venda</option>
+                  </select>
+                </div>
+                <div class="col-6 col-md-3">
+                  <label class="form-label" for="filter-from">De</label>
+                  <input class="form-control form-control-sm" id="filter-from" name="from" type="date">
+                </div>
+                <div class="col-6 col-md-3">
+                  <label class="form-label" for="filter-to">Até</label>
+                  <input class="form-control form-control-sm" id="filter-to" name="to" type="date">
+                </div>
+              </form>
               <div class="table-responsive">
                 <table class="table align-middle">
                   <thead>
