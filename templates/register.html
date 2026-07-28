@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Criar cadastro | Carteira de Investimentos</title>
+    <link rel="stylesheet" href="/static/vendor/bootstrap/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/static/vendor/bootstrap-icons/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="/static/vendor/sweetalert2/sweetalert2.min.css">
+    <link rel="stylesheet" href="/static/app.css">
+  </head>
+  <body class="bg-body-tertiary">
+    <main class="auth-shell container">
+      <section class="auth-card card shadow-sm">
+        <div class="card-body p-4">
+          <p class="text-uppercase text-primary small mb-1">Carteira de Investimentos</p>
+          <h1 class="h3 mb-3">Criar cadastro</h1>
+          <form method="post" action="/auth/register" data-auth-form="/auth/register" novalidate>
+            <div class="mb-3">
+              <label class="form-label" for="username">Usuário</label>
+              <input class="form-control" id="username" name="username" autocomplete="username" minlength="3" maxlength="64" required>
+              <div class="form-text">Use letras, números, ponto, hífen ou sublinhado.</div>
+            </div>
+            <div class="mb-3">
+              <label class="form-label" for="password">Senha</label>
+              <input class="form-control" id="password" name="password" type="password" autocomplete="new-password" minlength="12" required>
+              <div class="form-text">Mínimo de 12 caracteres.</div>
+            </div>
+            <button class="btn btn-primary w-100" type="submit">Cadastrar e entrar</button>
+          </form>
+          <p class="mt-3 mb-0 small">Já tem conta? <a href="/login">Entrar</a></p>
+        </div>
+      </section>
+      <div class="visually-hidden" aria-live="polite" data-live-region></div>
+    </main>
+    <script src="/static/vendor/bootstrap/js/bootstrap.bundle.min.js" defer></script>
+    <script src="/static/vendor/sweetalert2/sweetalert2.all.min.js" defer></script>
+    <script type="module" src="/static/dist/app.js"></script>
+  </body>
+</html>

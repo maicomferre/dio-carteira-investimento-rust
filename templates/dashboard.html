@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Dashboard | Carteira de Investimentos</title>
+    <link rel="stylesheet" href="/static/vendor/bootstrap/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/static/vendor/bootstrap-icons/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="/static/vendor/sweetalert2/sweetalert2.min.css">
+    <link rel="stylesheet" href="/static/app.css">
+  </head>
+  <body>
+    <header class="border-bottom bg-white">
+      <nav class="container py-3 d-flex align-items-center justify-content-between">
+        <a class="navbar-brand fw-semibold" href="/dashboard">Carteira de Investimentos</a>
+        <div class="d-flex align-items-center gap-3">
+          <a class="btn btn-outline-primary btn-sm" href="/dashboard"><i class="bi bi-speedometer2"></i> Dashboard</a>
+          <button class="btn btn-primary btn-sm" type="button"><i class="bi bi-plus-circle"></i> Registrar movimentação</button>
+          <span class="user-avatar" aria-label="Usuário {{ user.username }}">{{ user.initials }}</span>
+          <form method="post" action="/auth/logout" data-logout-form>
+            <button class="btn btn-outline-secondary btn-sm" type="submit">Sair</button>
+          </form>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container py-4" data-dashboard>
+      <div class="d-flex flex-wrap align-items-end justify-content-between gap-3 mb-4">
+        <div>
+          <p class="text-uppercase text-primary small mb-1">Dashboard</p>
+          <h1 class="h3 mb-0">Olá, {{ user.username }}</h1>
+        </div>
+        <div class="btn-group" role="group" aria-label="Selecionar moeda" data-currency-tabs></div>
+      </div>
+
+      <section class="row g-3 mb-4">
+        <div class="col-12 col-lg-4">
+          <article class="card h-100 shadow-sm">
+            <div class="card-body">
+              <p class="text-muted mb-1">Total da moeda selecionada</p>
+              <strong class="display-6" data-total-selected>Carregando...</strong>
+              <p class="small text-muted mt-2 mb-0">BRL e USD são exibidos separadamente.</p>
+            </div>
+          </article>
+        </div>
+        <div class="col-12 col-lg-4">
+          <article class="card h-100 shadow-sm">
+            <div class="card-body">
+              <h2 class="h6">Distribuição por categoria</h2>
+              <div class="chart-box" data-category-chart>Carregando...</div>
+            </div>
+          </article>
+        </div>
+        <div class="col-12 col-lg-4" data-broker-section hidden>
+          <article class="card h-100 shadow-sm">
+            <div class="card-body">
+              <h2 class="h6">Distribuição por corretora</h2>
+              <div class="chart-box" data-broker-chart></div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="row g-3">
+        <div class="col-12 col-xl-7">
+          <article class="card shadow-sm">
+            <div class="card-body">
+              <h2 class="h5">Participação dos ativos</h2>
+              <p class="text-muted small">Barras calculadas por moeda, sem conversão automática.</p>
+              <div data-asset-bars>Carregando...</div>
+            </div>
+          </article>
+        </div>
+        <div class="col-12 col-xl-5">
+          <article class="card shadow-sm">
+            <div class="card-body">
+              <h2 class="h5">Fluxo diário</h2>
+              <p class="text-muted small">Compras, vendas e saldo líquido diário quando houver extrato.</p>
+              <ul class="list-group list-group-flush" data-cash-flow></ul>
+            </div>
+          </article>
+        </div>
+      </section>
+      <div class="visually-hidden" aria-live="polite" data-live-region></div>
+    </main>
+
+    <footer class="border-top mt-5 py-3 text-center text-muted small">
+      Carteira de Investimentos — projeto educacional DIO/Santander.
+    </footer>
+
+    <script src="/static/vendor/bootstrap/js/bootstrap.bundle.min.js" defer></script>
+    <script src="/static/vendor/sweetalert2/sweetalert2.all.min.js" defer></script>
+    <script type="module" src="/static/dist/app.js"></script>
+  </body>
+</html>

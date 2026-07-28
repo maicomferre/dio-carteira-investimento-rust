@@ -1,10 +1,11 @@
 use std::{net::SocketAddr, time::Duration};
 
+use askama::Template;
 use axum::{
     Json, Router,
     extract::{ConnectInfo, Path, Query, State},
     http::{HeaderMap, HeaderName, HeaderValue, StatusCode, header},
-    response::{IntoResponse, Response},
+    response::{Html, IntoResponse, Redirect, Response},
     routing::{get, patch, post},
 };
 use rust_decimal::Decimal;
@@ -14,6 +15,7 @@ use time::OffsetDateTime;
 use tower_http::{
     limit::RequestBodyLimitLayer,
     request_id::{MakeRequestUuid, PropagateRequestIdLayer, SetRequestIdLayer},
+    services::ServeDir,
     timeout::TimeoutLayer,
     trace::TraceLayer,
 };
@@ -143,6 +145,26 @@ struct InstrumentSearchRequest {
     q: String,
 }
 
+#[derive(Debug)]
+struct PageUser {
+    username: String,
+    initials: String,
+}
+
+#[derive(Template)]
+#[template(path = "login.html")]
+struct LoginTemplate;
+
+#[derive(Template)]
+#[template(path = "register.html")]
+struct RegisterTemplate;
+
+#[derive(Template)]
+#[template(path = "dashboard.html")]
+struct DashboardTemplate {
+    user: PageUser,
+}
+
 #[derive(Debug, Serialize)]
 struct TransactionListResponse {
     transactions: Vec<PublicTransaction>,
@@ -221,6 +243,9 @@ pub fn build_router(
 
     Router::new()
         .route("/", get(root))
+        .route("/login", get(login_page))
+        .route("/register", get(register_page))
+        .route("/dashboard", get(dashboard_page))
         .route("/health/live", get(liveness))
         .route("/health/ready", get(readiness))
         .route("/auth/register", post(register))
@@ -237,6 +262,7 @@ pub fn build_router(
         .route("/api/transactions/buy", post(record_purchase))
         .route("/api/transactions/sell", post(record_sale))
         .route("/api/portfolio/summary", get(portfolio_summary))
+        .nest_service("/static", ServeDir::new("static"))
         .with_state(AppState {
             pool,
             auth,
@@ -253,8 +279,37 @@ pub fn build_router(
         .layer(TraceLayer::new_for_http())
 }
 
-async fn root() -> &'static str {
-    "Carteira de Investimentos"
+async fn root() -> Redirect {
+    Redirect::to("/dashboard")
+}
+
+async fn login_page() -> Result<Html<String>, AppError> {
+    render_template(LoginTemplate)
+}
+
+async fn register_page() -> Result<Html<String>, AppError> {
+    render_template(RegisterTemplate)
+}
+
+async fn dashboard_page(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Response, AppError> {
+    let user = match authenticated_user(&state, &headers).await {
+        Ok(user) => user,
+        Err(AppError::Unauthorized | AppError::InvalidCredentials) => {
+            return Ok(Redirect::to("/login").into_response());
+        }
+        Err(error) => return Err(error),
+    };
+
+    Ok(render_template(DashboardTemplate {
+        user: PageUser {
+            initials: username_initials(&user.username),
+            username: user.username,
+        },
+    })?
+    .into_response())
 }
 
 async fn liveness() -> Json<HealthStatus> {
@@ -714,6 +769,29 @@ fn limiter_username(username: &str) -> String {
         })
 }
 
+fn render_template<T: Template>(template: T) -> Result<Html<String>, AppError> {
+    template.render().map(Html).map_err(|error| {
+        tracing::error!(%error, "falha ao renderizar template");
+        AppError::Internal
+    })
+}
+
+fn username_initials(username: &str) -> String {
+    let initials: String = username
+        .split(|character: char| !character.is_alphanumeric())
+        .filter(|part| !part.is_empty())
+        .take(2)
+        .filter_map(|part| part.chars().next())
+        .flat_map(char::to_uppercase)
+        .collect();
+
+    if initials.is_empty() {
+        "?".to_owned()
+    } else {
+        initials.chars().take(2).collect()
+    }
+}
+
 fn summary_response(summary: PortfolioSummary) -> PortfolioSummaryResponse {
     PortfolioSummaryResponse {
         positions: summary
@@ -895,5 +973,15 @@ mod tests {
             validate_csrf(&headers, &auth_config()),
             Err(AppError::Forbidden)
         ));
+    }
+
+    #[test]
+    fn username_initials_uses_two_name_parts() {
+        assert_eq!(username_initials("maicom dev"), "MD");
+    }
+
+    #[test]
+    fn username_initials_falls_back_for_blank_value() {
+        assert_eq!(username_initials("  "), "?");
     }
 }
