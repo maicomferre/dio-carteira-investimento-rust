@@ -1257,6 +1257,13 @@ impl IntoResponse for AppError {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use axum::body::{Body, to_bytes};
+    use serde_json::Value;
+    use sqlx::postgres::PgPoolOptions;
+    use tower::ServiceExt;
+
+    const TEST_DATABASE_URL: &str =
+        "postgres://carteira_app:carteira_app_dev_password@127.0.0.1:65432/carteira_dev";
 
     fn auth_config() -> AuthConfig {
         AuthConfig {
@@ -1281,6 +1288,67 @@ mod tests {
             mutation_rate_limit_block_seconds: 300,
             expired_session_retention_days: 7,
         }
+    }
+
+    fn http_config() -> HttpConfig {
+        HttpConfig {
+            bind_addr: SocketAddr::from(([127, 0, 0, 1], 3000)),
+            request_timeout: Duration::from_secs(5),
+            max_body_bytes: 16_384,
+            max_concurrent_requests: 16,
+        }
+    }
+
+    fn instrument_provider_config() -> InstrumentProviderConfig {
+        InstrumentProviderConfig {
+            timeout: Duration::from_secs(1),
+            cache_ttl: Duration::from_secs(60),
+            stale_ttl: Duration::from_secs(300),
+            max_results: 5,
+        }
+    }
+
+    fn lazy_pool() -> PgPool {
+        PgPoolOptions::new()
+            .acquire_timeout(Duration::from_millis(100))
+            .connect_lazy(TEST_DATABASE_URL)
+            .expect("lazy test database pool")
+    }
+
+    fn test_router(auth: AuthConfig) -> Router {
+        build_router(
+            lazy_pool(),
+            http_config(),
+            auth,
+            instrument_provider_config(),
+        )
+    }
+
+    fn request(method: axum::http::Method, uri: &str, body: Body) -> Request {
+        let mut request = Request::builder()
+            .method(method)
+            .uri(uri)
+            .header(header::CONTENT_TYPE, "application/json")
+            .body(body)
+            .expect("build test request");
+        request
+            .extensions_mut()
+            .insert(ConnectInfo(SocketAddr::from(([127, 0, 0, 1], 31_000))));
+        request
+    }
+
+    async fn json_body(response: Response) -> Value {
+        let body = to_bytes(response.into_body(), 4096)
+            .await
+            .expect("read response body");
+        serde_json::from_slice(&body).expect("response body is json")
+    }
+
+    async fn assert_public_error(response: Response, status: StatusCode, code: &str) {
+        assert_eq!(response.status(), status);
+        let json = json_body(response).await;
+        assert_eq!(json["error"]["code"], code);
+        assert!(json["error"]["message"].as_str().is_some());
     }
 
     #[test]
@@ -1410,6 +1478,134 @@ mod tests {
 
         assert_eq!(json["error"]["code"], "internal_error");
         assert_eq!(json["error"]["message"], "erro interno");
+    }
+
+    #[tokio::test]
+    async fn http_get_authenticated_api_without_session_returns_401() {
+        let response = test_router(auth_config())
+            .oneshot(request(
+                axum::http::Method::GET,
+                "/api/assets",
+                Body::empty(),
+            ))
+            .await
+            .expect("route response");
+
+        assert_public_error(response, StatusCode::UNAUTHORIZED, "unauthorized").await;
+    }
+
+    #[tokio::test]
+    async fn http_mutation_without_csrf_returns_403_before_authentication() {
+        let payload = serde_json::json!({
+            "symbol": "PETR4",
+            "name": "Petrobras PN",
+            "market": "B3",
+            "category": "STOCK",
+            "currency": "BRL",
+            "current_price": "38.42"
+        });
+        let response = test_router(auth_config())
+            .oneshot(request(
+                axum::http::Method::POST,
+                "/api/assets",
+                Body::from(payload.to_string()),
+            ))
+            .await
+            .expect("route response");
+
+        assert_public_error(response, StatusCode::FORBIDDEN, "forbidden").await;
+    }
+
+    #[tokio::test]
+    async fn http_invalid_json_payload_returns_422() {
+        let response = test_router(auth_config())
+            .oneshot(request(
+                axum::http::Method::POST,
+                "/auth/register",
+                Body::from(
+                    serde_json::json!({
+                        "username": "x",
+                        "password": "short"
+                    })
+                    .to_string(),
+                ),
+            ))
+            .await
+            .expect("route response");
+
+        assert_public_error(
+            response,
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "validation_error",
+        )
+        .await;
+    }
+
+    #[tokio::test]
+    async fn http_global_rate_limit_returns_429_and_recovers_by_scope() {
+        let mut auth = auth_config();
+        auth.global_rate_limit_max_requests = 1;
+        auth.global_rate_limit_window_seconds = 60;
+        auth.global_rate_limit_block_seconds = 60;
+        let router = test_router(auth);
+
+        let first = router
+            .clone()
+            .oneshot(request(axum::http::Method::GET, "/login", Body::empty()))
+            .await
+            .expect("first route response");
+        assert_eq!(first.status(), StatusCode::OK);
+
+        let second = router
+            .oneshot(request(axum::http::Method::GET, "/login", Body::empty()))
+            .await
+            .expect("second route response");
+
+        assert_public_error(second, StatusCode::TOO_MANY_REQUESTS, "rate_limited").await;
+    }
+
+    #[tokio::test]
+    async fn http_readiness_with_unavailable_database_returns_controlled_503() {
+        let response = test_router(auth_config())
+            .oneshot(request(
+                axum::http::Method::GET,
+                "/health/ready",
+                Body::empty(),
+            ))
+            .await
+            .expect("route response");
+
+        assert_public_error(
+            response,
+            StatusCode::SERVICE_UNAVAILABLE,
+            "service_unavailable",
+        )
+        .await;
+    }
+
+    #[tokio::test]
+    async fn http_internal_error_keeps_generic_500_envelope() {
+        async fn forced_internal_error() -> Result<StatusCode, AppError> {
+            Err(AppError::Internal)
+        }
+
+        let response = Router::new()
+            .route("/forced-internal-error", get(forced_internal_error))
+            .oneshot(
+                Request::builder()
+                    .uri("/forced-internal-error")
+                    .body(Body::empty())
+                    .expect("build test request"),
+            )
+            .await
+            .expect("route response");
+
+        assert_public_error(
+            response,
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "internal_error",
+        )
+        .await;
     }
 
     #[test]

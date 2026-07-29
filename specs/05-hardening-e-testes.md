@@ -2,7 +2,7 @@
 
 - **Status:** em andamento
 - **Criado em:** 2026-07-25
-- **Última atualização:** 2026-07-28
+- **Última atualização:** 2026-07-29
 
 ## Objetivo
 
@@ -67,8 +67,8 @@ Top 10:2025, além de resiliência a abuso e falhas externas.
   - [x] XSS em template Askama: teste garante escape de valores controlados pelo
     usuário no dashboard.
   - [x] Erro interno: teste garante envelope público genérico e estável.
-  - [ ] Cenários HTTP completos de 401/403/422/429/500 ainda precisam de
-    cobertura adicional.
+  - [x] Cenários HTTP completos cobrem respostas públicas de `401`, `403`,
+    `422`, `429`, `500` e indisponibilidade controlada `503` pelo router Axum.
 - [x] Executar auditoria Rust/npm, licença, segredo e gerar SBOM.
   - `npm audit --audit-level=moderate`: 0 vulnerabilidades.
   - `cargo audit`: removeu dependência vulnerável `rsa` via troca de JWT para
@@ -87,7 +87,9 @@ Top 10:2025, além de resiliência a abuso e falhas externas.
 - [x] Todos os limites implementados na aplicação retornam erro controlado, sem
   crash ou vazamento.
 - [ ] Matriz ASVS/Top 10 aponta para testes ou configuração verificável.
-- [ ] Carga acima do limite degrada de forma previsível e recupera depois.
+- [x] Excesso acima do rate limit da aplicação retorna `429` previsível.
+- [ ] Saturação de concorrência/DB e slow request degradam de forma previsível e
+  recuperam depois em teste controlado.
 
 ## Riscos e mitigação
 
