@@ -8,13 +8,14 @@ anyhow = "1.0.104"
 argon2 = "0.5.3"
 askama = "0.14.0"
 axum = "0.8.9"
+base64 = "0.22.1"
 dotenvy = "0.15.7"
 hmac = "0.13.0"
 hex = "0.4.3"
-jsonwebtoken = { version = "11.0.0", features = ["rust_crypto"] }
 rand_core = { version = "0.6.4", features = ["getrandom"] }
 rust_decimal = { version = "1.39.0", features = ["serde-with-str"] }
 serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.151"
 sha2 = "0.11.0"
 sqlx = { version = "0.9.0", features = ["runtime-tokio", "tls-rustls-ring", "postgres", "uuid", "time", "rust_decimal", "migrate"] }
 thiserror = "2.0.19"
@@ -27,4 +28,3 @@ uuid = { version = "1.24.0", features = ["v4", "serde"] }
 
 [dev-dependencies]
 rust_decimal_macros = "1.39.0"
-serde_json = "1.0.151"

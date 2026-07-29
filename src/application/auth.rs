@@ -2,8 +2,8 @@ use argon2::{
     Argon2,
     password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
 };
+use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
 use hmac::{Hmac, KeyInit, Mac};
-use jsonwebtoken::{Algorithm, DecodingKey, EncodingKey, Header, Validation, decode, encode};
 use rand_core::OsRng;
 use serde::{Deserialize, Serialize};
 use sha2::Sha256;
@@ -44,6 +44,12 @@ struct Claims {
     exp: i64,
     nbf: i64,
     iat: i64,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct JwtHeader {
+    alg: String,
+    typ: String,
 }
 
 pub async fn register_user(
@@ -193,30 +199,104 @@ fn hmac_hex(key: &[u8], value: &[u8]) -> Result<String, AppError> {
 }
 
 fn encode_claims(config: &AuthConfig, claims: &Claims) -> Result<String, AppError> {
-    encode(
-        &Header::new(Algorithm::HS256),
-        claims,
-        &EncodingKey::from_secret(config.jwt_secret.as_bytes()),
-    )
-    .map_err(|error| {
-        tracing::error!(%error, "falha ao assinar jwt");
-        AppError::Internal
-    })
+    let header = JwtHeader {
+        alg: "HS256".to_owned(),
+        typ: "JWT".to_owned(),
+    };
+    let header = encode_json_segment(&header)?;
+    let payload = encode_json_segment(claims)?;
+    let signing_input = format!("{header}.{payload}");
+    let signature = hmac_bytes(config.jwt_secret.as_bytes(), signing_input.as_bytes())?;
+
+    Ok(format!(
+        "{signing_input}.{}",
+        URL_SAFE_NO_PAD.encode(signature)
+    ))
 }
 
 fn decode_claims(config: &AuthConfig, token: &str, validate_exp: bool) -> Result<Claims, AppError> {
-    let mut validation = Validation::new(Algorithm::HS256);
-    validation.set_audience(&[config.jwt_audience.as_str()]);
-    validation.set_issuer(&[config.jwt_issuer.as_str()]);
-    validation.validate_exp = validate_exp;
+    let parts = token.split('.').collect::<Vec<_>>();
+    let [header, payload, signature] = parts.as_slice() else {
+        return Err(AppError::Unauthorized);
+    };
 
-    decode::<Claims>(
-        token,
-        &DecodingKey::from_secret(config.jwt_secret.as_bytes()),
-        &validation,
-    )
-    .map(|token_data| token_data.claims)
-    .map_err(|_| AppError::Unauthorized)
+    let decoded_header: JwtHeader = decode_json_segment(header)?;
+    if decoded_header.alg != "HS256" || decoded_header.typ != "JWT" {
+        return Err(AppError::Unauthorized);
+    }
+
+    let signing_input = format!("{header}.{payload}");
+    let signature = URL_SAFE_NO_PAD
+        .decode(signature)
+        .map_err(|_| AppError::Unauthorized)?;
+    verify_hmac(
+        config.jwt_secret.as_bytes(),
+        signing_input.as_bytes(),
+        &signature,
+    )?;
+
+    let claims: Claims = decode_json_segment(payload)?;
+    validate_claims(config, &claims, validate_exp)?;
+
+    Ok(claims)
+}
+
+fn encode_json_segment<T: Serialize>(value: &T) -> Result<String, AppError> {
+    serde_json::to_vec(value)
+        .map(|json| URL_SAFE_NO_PAD.encode(json))
+        .map_err(|error| {
+            tracing::error!(%error, "falha ao serializar jwt");
+            AppError::Internal
+        })
+}
+
+fn decode_json_segment<T: for<'de> Deserialize<'de>>(segment: &str) -> Result<T, AppError> {
+    let decoded = URL_SAFE_NO_PAD
+        .decode(segment)
+        .map_err(|_| AppError::Unauthorized)?;
+
+    serde_json::from_slice(&decoded).map_err(|_| AppError::Unauthorized)
+}
+
+fn hmac_bytes(key: &[u8], value: &[u8]) -> Result<Vec<u8>, AppError> {
+    let mut mac = HmacSha256::new_from_slice(key).map_err(|error| {
+        tracing::error!(%error, "chave hmac inválida");
+        AppError::Internal
+    })?;
+    mac.update(value);
+
+    Ok(mac.finalize().into_bytes().to_vec())
+}
+
+fn verify_hmac(key: &[u8], value: &[u8], signature: &[u8]) -> Result<(), AppError> {
+    let mut mac = HmacSha256::new_from_slice(key).map_err(|error| {
+        tracing::error!(%error, "chave hmac inválida");
+        AppError::Internal
+    })?;
+    mac.update(value);
+
+    mac.verify_slice(signature)
+        .map_err(|_| AppError::Unauthorized)
+}
+
+fn validate_claims(
+    config: &AuthConfig,
+    claims: &Claims,
+    validate_exp: bool,
+) -> Result<(), AppError> {
+    if claims.iss != config.jwt_issuer || claims.aud != config.jwt_audience {
+        return Err(AppError::Unauthorized);
+    }
+
+    let now = OffsetDateTime::now_utc().unix_timestamp();
+    if validate_exp && claims.exp <= now {
+        return Err(AppError::Unauthorized);
+    }
+    if claims.nbf > now || claims.iat > now {
+        return Err(AppError::Unauthorized);
+    }
+
+    Ok(())
 }
 
 fn public_user(user: UserRecord) -> PublicUser {
