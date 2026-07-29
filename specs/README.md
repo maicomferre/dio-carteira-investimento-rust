@@ -35,6 +35,8 @@ Documentos de apoio da Fase 0:
   erros publicos.
 - [`AMEACAS_E_CONTROLES.md`](AMEACAS_E_CONTROLES.md) — STRIDE, Top 10, Docker e
   riscos aceitos.
+- [`ASVS_CHECKLIST.md`](ASVS_CHECKLIST.md) — matriz de evidências ASVS, OWASP
+  Top 10 Web e OWASP Docker Top 10.
 - [`DECISOES_TECNICAS.md`](DECISOES_TECNICAS.md) — versoes alvo, dependencias,
   provider, arredondamento e implantacao.
 

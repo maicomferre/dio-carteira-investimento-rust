@@ -76,7 +76,9 @@ Top 10:2025, além de resiliência a abuso e falhas externas.
   - `trivy fs`: nenhum HIGH/CRITICAL no filesystem com secrets/misconfig/vuln.
   - SBOM CycloneDX gerado por `npm run audit:supply-chain` em diretório ignorado.
   - Evidência detalhada: [`SECURITY_AUDIT.md`](SECURITY_AUDIT.md).
-- [ ] Revisar cada item ASVS aplicável com evidência; justificar `N/A`.
+- [x] Revisar cada item ASVS aplicável com evidência; justificar `N/A`.
+  - Matriz criada em [`ASVS_CHECKLIST.md`](ASVS_CHECKLIST.md), cobrindo ASVS,
+    OWASP Top 10 Web e OWASP Docker Top 10 com status, evidência e lacunas.
 - [ ] Definir alertas para falhas repetidas de login, 429, 5xx e exaustão de pool.
   Métricas e regras concretas do host ficam privadas; a aplicação pública deve
   apenas emitir eventos suficientes para a camada operacional correlacionar.
@@ -86,7 +88,7 @@ Top 10:2025, além de resiliência a abuso e falhas externas.
 - [x] Nenhuma pendência crítica/alta conhecida.
 - [x] Todos os limites implementados na aplicação retornam erro controlado, sem
   crash ou vazamento.
-- [ ] Matriz ASVS/Top 10 aponta para testes ou configuração verificável.
+- [x] Matriz ASVS/Top 10 aponta para testes ou configuração verificável.
 - [x] Excesso acima do rate limit da aplicação retorna `429` previsível.
 - [ ] Saturação de concorrência/DB e slow request degradam de forma previsível e
   recuperam depois em teste controlado.
