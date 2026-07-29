@@ -1378,6 +1378,41 @@ mod tests {
     }
 
     #[test]
+    fn dashboard_template_escapes_user_controlled_values() {
+        let html = DashboardTemplate {
+            user: PageUser {
+                username: "<script>alert(1)</script>".to_owned(),
+                initials: "<X".to_owned(),
+            },
+            csrf_token: "\"><script>alert(2)</script>".to_owned(),
+        }
+        .render()
+        .expect("render dashboard template");
+
+        assert!(!html.contains("<script>alert(1)</script>"));
+        assert!(!html.contains("<script>alert(2)</script>"));
+        assert!(html.contains("alert(1)"));
+        assert!(html.contains("alert(2)"));
+        assert!(html.contains("&lt;") || html.contains("&#60;"));
+        assert!(html.contains("&quot;") || html.contains("&#34;"));
+    }
+
+    #[tokio::test]
+    async fn internal_error_response_is_generic_and_stable() {
+        let response = AppError::Internal.into_response();
+
+        assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
+        let body = axum::body::to_bytes(response.into_body(), 1024)
+            .await
+            .expect("read error response body");
+        let json: serde_json::Value =
+            serde_json::from_slice(&body).expect("error response is json");
+
+        assert_eq!(json["error"]["code"], "internal_error");
+        assert_eq!(json["error"]["message"], "erro interno");
+    }
+
+    #[test]
     fn global_rate_limit_exempts_health_checks_only() {
         assert!(is_global_rate_limit_exempt("/health/live"));
         assert!(is_global_rate_limit_exempt("/health/ready"));

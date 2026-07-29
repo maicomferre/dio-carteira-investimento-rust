@@ -93,6 +93,9 @@ comprometimento de host. Ser Rust em vez de Laravel não influencia a decisão.
   rootfs, tmpfs, capabilities, logging e volumes.
 - [ ] Separar job/container de migration com credencial própria da aplicação.
 - [ ] Escanear imagem e filesystem com Trivy; gerar SBOM e revisar licenças.
+  - [x] Filesystem scan e SBOM público/repetível via
+    `npm run audit:supply-chain`.
+  - [ ] Scan da imagem final ainda depende do build/tag da imagem de produção.
 - [ ] Criar auditoria automática de `docker inspect` contra o baseline.
 - [ ] Testar restauração, restart, OOM controlado e indisponibilidade do DB.
 - [ ] Medir o VPS real e registrar a decisão same-host/separate-host em

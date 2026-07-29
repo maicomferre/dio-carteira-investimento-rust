@@ -64,9 +64,18 @@ Top 10:2025, além de resiliência a abuso e falhas externas.
   - [x] SQLi/IDOR/ownership: testes de integração validam queries parametrizadas,
     escopo por `user_id`, tentativa de update de ativo de outro usuário e
     movimentação com corretora de outro usuário.
-  - [ ] XSS armazenado/refletido, erro interno e cenários HTTP completos ainda
-    precisam de cobertura adicional.
-- [ ] Executar auditoria Rust/npm, licença, segredo e gerar SBOM.
+  - [x] XSS em template Askama: teste garante escape de valores controlados pelo
+    usuário no dashboard.
+  - [x] Erro interno: teste garante envelope público genérico e estável.
+  - [ ] Cenários HTTP completos de 401/403/422/429/500 ainda precisam de
+    cobertura adicional.
+- [x] Executar auditoria Rust/npm, licença, segredo e gerar SBOM.
+  - `npm audit --audit-level=moderate`: 0 vulnerabilidades.
+  - `cargo audit`: removeu dependência vulnerável `rsa` via troca de JWT para
+    HS256 interno; nova execução sem vulnerabilidades.
+  - `trivy fs`: nenhum HIGH/CRITICAL no filesystem com secrets/misconfig/vuln.
+  - SBOM CycloneDX gerado por `npm run audit:supply-chain` em diretório ignorado.
+  - Evidência detalhada: [`SECURITY_AUDIT.md`](SECURITY_AUDIT.md).
 - [ ] Revisar cada item ASVS aplicável com evidência; justificar `N/A`.
 - [ ] Definir alertas para falhas repetidas de login, 429, 5xx e exaustão de pool.
   Métricas e regras concretas do host ficam privadas; a aplicação pública deve
@@ -74,7 +83,7 @@ Top 10:2025, além de resiliência a abuso e falhas externas.
 
 ## Critérios de aceitação
 
-- [ ] Nenhuma pendência crítica/alta conhecida.
+- [x] Nenhuma pendência crítica/alta conhecida.
 - [x] Todos os limites implementados na aplicação retornam erro controlado, sem
   crash ou vazamento.
 - [ ] Matriz ASVS/Top 10 aponta para testes ou configuração verificável.
