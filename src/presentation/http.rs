@@ -44,6 +44,7 @@ use crate::{
         instrument_provider::{CachedInstrumentProvider, InstrumentProviderConfig},
         portfolio_repository::PortfolioRepository,
         security::{IpRateLimiter, LoginRateLimiter},
+        security_events,
     },
 };
 
@@ -394,11 +395,7 @@ async fn global_rate_limit(
             .check_and_record(addr.ip(), GLOBAL_RATE_LIMIT_SCOPE)
             .await
     {
-        tracing::warn!(
-            client_ip = %addr.ip(),
-            path,
-            "requisição bloqueada pelo rate limit global"
-        );
+        security_events::log_http_rate_limited(addr.ip(), GLOBAL_RATE_LIMIT_SCOPE, path);
         return Err(error);
     }
 
@@ -412,11 +409,7 @@ async fn concurrency_limit(
     next: Next,
 ) -> Result<Response, AppError> {
     let Ok(_permit) = state.concurrency_limiter.clone().try_acquire_owned() else {
-        tracing::warn!(
-            client_ip = %addr.ip(),
-            path = request.uri().path(),
-            "requisição bloqueada por limite de concorrência"
-        );
+        security_events::log_concurrency_saturated(addr.ip(), request.uri().path());
         return Err(AppError::Unavailable);
     };
 
@@ -575,7 +568,7 @@ async fn readiness(State(state): State<AppState>) -> Result<Json<HealthStatus>, 
         .execute(&state.pool)
         .await
         .map_err(|error| {
-            tracing::warn!(%error, "readiness falhou");
+            security_events::log_db_readiness_failed(&error);
             AppError::Unavailable
         })?;
 
@@ -623,10 +616,14 @@ async fn issue_login_session(
     payload: AuthRequest,
 ) -> Result<IssuedSession, AppError> {
     let limiter_username = limiter_username(&payload.username);
-    state
+    if let Err(error) = state
         .login_rate_limiter
         .check(addr.ip(), &limiter_username)
-        .await?;
+        .await
+    {
+        security_events::log_login_rate_limited(addr.ip(), &limiter_username);
+        return Err(error);
+    }
 
     let repository = AuthRepository::new(state.pool.clone());
     let session_result = match auth::login_user(
@@ -643,6 +640,7 @@ async fn issue_login_session(
                 .login_rate_limiter
                 .record_failure(addr.ip(), &limiter_username)
                 .await;
+            security_events::log_login_failed(addr.ip(), &limiter_username);
             return Err(AppError::InvalidCredentials);
         }
         Err(error) => return Err(error),
@@ -677,6 +675,9 @@ async fn apply_register_rate_limit(state: &AppState, addr: SocketAddr) -> Result
         .register_rate_limiter
         .check_and_record(addr.ip(), REGISTER_RATE_LIMIT_SCOPE)
         .await
+        .inspect_err(|_| {
+            security_events::log_http_rate_limited(addr.ip(), REGISTER_RATE_LIMIT_SCOPE, "");
+        })
 }
 
 async fn apply_mutation_rate_limit(state: &AppState, addr: SocketAddr) -> Result<(), AppError> {
@@ -684,6 +685,9 @@ async fn apply_mutation_rate_limit(state: &AppState, addr: SocketAddr) -> Result
         .mutation_rate_limiter
         .check_and_record(addr.ip(), MUTATION_RATE_LIMIT_SCOPE)
         .await
+        .inspect_err(|_| {
+            security_events::log_http_rate_limited(addr.ip(), MUTATION_RATE_LIMIT_SCOPE, "");
+        })
 }
 
 async fn me(
@@ -1261,6 +1265,9 @@ impl IntoResponse for AppError {
             response
                 .headers_mut()
                 .insert(HeaderName::from_static(REQUEST_ID_HEADER), header_value);
+        }
+        if status.is_server_error() {
+            security_events::log_server_error(status.as_u16(), code, &correlation_id);
         }
 
         response

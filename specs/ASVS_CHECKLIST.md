@@ -26,7 +26,7 @@ firewall, domínios e deploy permanecem fora do repositório público.
 | CSRF e navegação web | Implementado | Double-submit cookie/header, validação de Origin/Referer, mutações autenticadas protegidas | Testes unitários de CSRF e teste HTTP `403` | Validar UX sem JavaScript em fase de interface |
 | Saída/HTML/XSS | Implementado | Templates Askama escapam dados do usuário; CSP restritiva sem recurso remoto obrigatório | Teste de escape do dashboard e `security_headers_include_csp_and_no_store` | Revisão visual/browser ainda pendente |
 | Criptografia e segredos | Parcial | Secrets obrigatórios >=32 chars, Argon2id e HMAC-SHA256; segredos fora do Git | `src/infrastructure/config.rs`, `cargo audit`, script de scan | TLS, rotação e armazenamento real são privados de infraestrutura |
-| Erros e logging | Parcial | `AppError` gera envelope público estável com `correlation_id`; logs usam tracing sem secrets intencionais | Testes HTTP `401/403/422/429/500/503` | Eventos e alertas operacionais ainda pendentes |
+| Erros e logging | Implementado | `AppError` gera envelope público estável com `correlation_id`; eventos estruturados cobrem login, rate limit, saturação, readiness e `5xx` | Testes HTTP `401/403/422/429/500/503`, `specs/SECURITY_EVENTS.md` | Thresholds e ações de alerta ficam na infraestrutura privada |
 | Disponibilidade | Parcial | Body limit, timeout, pool limit, concorrência, rate limits global/login/registro/mutação | Testes de rate limit `429` e readiness `503`; config tipada | Teste controlado de slow request, saturação de DB e concorrência ainda pendente |
 | Banco e integridade | Implementado | PostgreSQL, SQLx parametrizado, migrations versionadas, constraints de ownership | Migrations e testes SQLi/IDOR/ownership | Backup/restore real pertence à operação privada |
 | API e contrato | Parcial | Status HTTP previsíveis, envelope de erro com `correlation_id`, CSRF em mutações e autenticação por cookie | `specs/CONTRATO_HTTP.md`, testes HTTP de status | Erros por campo ainda não estão completos no JSON real |
@@ -46,7 +46,7 @@ firewall, domínios e deploy permanecem fora do repositório público.
 | A06 Insecure Design | Implementado | Threat model, invariantes e separação de responsabilidades documentados |
 | A07 Authentication Failures | Implementado | Rate limit, resposta genérica, sessão revogável e testes JWT/cookie |
 | A08 Integrity Failures | Parcial | Migrations/lockfiles/auditoria; assinatura/proveniência de imagem ainda pendente |
-| A09 Logging and Alerting Failures | Parcial | Tracing e request id existem; alertas operacionais ainda não definidos |
+| A09 Logging and Alerting Failures | Implementado | Eventos estruturados documentados; regras concretas de alerta ficam fora do Git público |
 | A10 Exceptional Conditions | Implementado | Erros tipados, resposta `500` genérica, readiness `503` e rollback transacional |
 
 ## OWASP Docker Top 10
@@ -66,8 +66,6 @@ firewall, domínios e deploy permanecem fora do repositório público.
 
 ## Próximas lacunas verificáveis
 
-1. Definir eventos/níveis de log para login falho repetido, `429`, `5xx` e
-   exaustão de pool, mantendo regras de alerta fora do Git público.
-2. Executar build e scan Trivy da imagem final.
-3. Criar teste controlado de saturação de concorrência/DB e slow request.
-4. Escolher licença do projeto e registrar compatibilidade das dependências.
+1. Executar build e scan Trivy da imagem final.
+2. Criar teste controlado de saturação de concorrência/DB e slow request.
+3. Escolher licença do projeto e registrar compatibilidade das dependências.

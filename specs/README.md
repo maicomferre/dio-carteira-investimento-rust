@@ -40,6 +40,13 @@ Documentos de apoio da Fase 0:
 - [`DECISOES_TECNICAS.md`](DECISOES_TECNICAS.md) — versoes alvo, dependencias,
   provider, arredondamento e implantacao.
 
+Documentos de evidência e operação pública:
+
+- [`SECURITY_AUDIT.md`](SECURITY_AUDIT.md) — auditoria manual/repetível de
+  dependências, filesystem, SBOM e segredos.
+- [`SECURITY_EVENTS.md`](SECURITY_EVENTS.md) — eventos públicos de segurança e
+  operação emitidos pela aplicação, sem regras privadas de alerta.
+
 Testes acompanham cada fase. A fase 5 valida o conjunto e fecha lacunas, não
 adia segurança para o fim. Decisões novas entram na tabela do plano afetado e,
 se normativas, também no `SPEC.md`.

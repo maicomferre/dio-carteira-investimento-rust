@@ -4,4 +4,5 @@ pub mod database;
 pub mod instrument_provider;
 pub mod portfolio_repository;
 pub mod security;
+pub mod security_events;
 pub mod telemetry;
