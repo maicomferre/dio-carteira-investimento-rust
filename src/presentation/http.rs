@@ -91,12 +91,14 @@ struct PublicError {
 }
 
 #[derive(Debug, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
 struct AuthRequest {
     username: String,
     password: String,
 }
 
 #[derive(Debug, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
 struct LogoutForm {
     csrf_token: String,
 }
@@ -120,17 +122,20 @@ struct IssuedSession {
 }
 
 #[derive(Debug, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
 struct CreateBrokerRequest {
     name: String,
 }
 
 #[derive(Debug, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
 struct UpdateBrokerRequest {
     name: String,
     version: i64,
 }
 
 #[derive(Debug, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
 struct CreateAssetRequest {
     symbol: String,
     name: String,
@@ -141,6 +146,7 @@ struct CreateAssetRequest {
 }
 
 #[derive(Debug, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
 struct UpdateAssetRequest {
     symbol: Option<String>,
     name: Option<String>,
@@ -152,6 +158,7 @@ struct UpdateAssetRequest {
 }
 
 #[derive(Debug, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
 struct CreateTransactionRequest {
     asset_id: Uuid,
     broker_id: Uuid,
@@ -173,6 +180,7 @@ struct AssetListResponse {
 }
 
 #[derive(Debug, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
 struct InstrumentSearchRequest {
     q: String,
 }
@@ -1375,5 +1383,35 @@ mod tests {
         assert!(is_global_rate_limit_exempt("/health/ready"));
         assert!(!is_global_rate_limit_exempt("/login"));
         assert!(!is_global_rate_limit_exempt("/static/app.css"));
+    }
+
+    #[test]
+    fn asset_request_rejects_unknown_fields_to_reduce_mass_assignment_risk() {
+        let payload = serde_json::json!({
+            "symbol": "PETR4",
+            "name": "Petrobras PN",
+            "market": "B3",
+            "category": "STOCK",
+            "currency": "BRL",
+            "current_price": "38.42",
+            "user_id": Uuid::new_v4(),
+            "is_admin": true
+        });
+
+        assert!(serde_json::from_value::<CreateAssetRequest>(payload).is_err());
+    }
+
+    #[test]
+    fn transaction_request_rejects_unknown_fields_to_reduce_mass_assignment_risk() {
+        let payload = serde_json::json!({
+            "asset_id": Uuid::new_v4(),
+            "broker_id": Uuid::new_v4(),
+            "quantity": "10",
+            "unit_price": "38.42",
+            "fees": "0",
+            "force_user_id": Uuid::new_v4()
+        });
+
+        assert!(serde_json::from_value::<CreateTransactionRequest>(payload).is_err());
     }
 }

@@ -57,6 +57,15 @@ Top 10:2025, além de resiliência a abuso e falhas externas.
   `Cache-Control: no-store` em conteúdo autenticado.
 - [ ] Criar testes para CSRF, XSS armazenado/refletido, SQLi, IDOR, mass
   assignment, cookie/JWT e erro interno.
+  - [x] CSRF: cookie/header/origin cobertos por testes unitários.
+  - [x] Cookie/JWT: token adulterado, expirado e audience incorreta cobertos.
+  - [x] Mass assignment: payloads JSON com campos inesperados são rejeitados por
+    `deny_unknown_fields`.
+  - [x] SQLi/IDOR/ownership: testes de integração validam queries parametrizadas,
+    escopo por `user_id`, tentativa de update de ativo de outro usuário e
+    movimentação com corretora de outro usuário.
+  - [ ] XSS armazenado/refletido, erro interno e cenários HTTP completos ainda
+    precisam de cobertura adicional.
 - [ ] Executar auditoria Rust/npm, licença, segredo e gerar SBOM.
 - [ ] Revisar cada item ASVS aplicável com evidência; justificar `N/A`.
 - [ ] Definir alertas para falhas repetidas de login, 429, 5xx e exaustão de pool.
