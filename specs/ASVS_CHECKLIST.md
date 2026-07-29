@@ -26,10 +26,10 @@ firewall, domínios e deploy permanecem fora do repositório público.
 | CSRF e navegação web | Implementado | Double-submit cookie/header, validação de Origin/Referer, mutações autenticadas protegidas | Testes unitários de CSRF e teste HTTP `403` | Validar UX sem JavaScript em fase de interface |
 | Saída/HTML/XSS | Implementado | Templates Askama escapam dados do usuário; CSP restritiva sem recurso remoto obrigatório | Teste de escape do dashboard e `security_headers_include_csp_and_no_store` | Revisão visual/browser ainda pendente |
 | Criptografia e segredos | Parcial | Secrets obrigatórios >=32 chars, Argon2id e HMAC-SHA256; segredos fora do Git | `src/infrastructure/config.rs`, `cargo audit`, script de scan | TLS, rotação e armazenamento real são privados de infraestrutura |
-| Erros e logging | Parcial | `AppError` gera envelope público estável; logs usam tracing sem secrets intencionais | Testes HTTP `401/403/422/429/500/503` | Contrato cita `correlation_id`, mas resposta JSON ainda não inclui esse campo |
+| Erros e logging | Parcial | `AppError` gera envelope público estável com `correlation_id`; logs usam tracing sem secrets intencionais | Testes HTTP `401/403/422/429/500/503` | Eventos e alertas operacionais ainda pendentes |
 | Disponibilidade | Parcial | Body limit, timeout, pool limit, concorrência, rate limits global/login/registro/mutação | Testes de rate limit `429` e readiness `503`; config tipada | Teste controlado de slow request, saturação de DB e concorrência ainda pendente |
 | Banco e integridade | Implementado | PostgreSQL, SQLx parametrizado, migrations versionadas, constraints de ownership | Migrations e testes SQLi/IDOR/ownership | Backup/restore real pertence à operação privada |
-| API e contrato | Parcial | Status HTTP previsíveis, envelope de erro, CSRF em mutações e autenticação por cookie | `specs/CONTRATO_HTTP.md`, testes HTTP de status | `correlation_id` e erros por campo ainda não estão completos no JSON real |
+| API e contrato | Parcial | Status HTTP previsíveis, envelope de erro com `correlation_id`, CSRF em mutações e autenticação por cookie | `specs/CONTRATO_HTTP.md`, testes HTTP de status | Erros por campo ainda não estão completos no JSON real |
 | Supply chain | Implementado | Lockfiles, `cargo audit`, `npm audit`, Trivy filesystem, SBOM CycloneDX ignorado pelo Git | `scripts/audit-supply-chain.sh`, `specs/SECURITY_AUDIT.md` | Licença formal do projeto ainda pendente para entrega DIO |
 | Arquivos e upload | N/A | O MVP não aceita upload de arquivos do usuário | Rotas documentadas em `specs/CONTRATO_HTTP.md` | Reavaliar se upload for adicionado |
 | Comunicação externa | Parcial | Provider de instrumentos passa pelo backend/cache; navegador não acessa provider direto | `src/infrastructure/instrument_provider.rs` | Provider externo real, retry/jitter/circuit breaker e licença ainda pendentes |
@@ -66,9 +66,8 @@ firewall, domínios e deploy permanecem fora do repositório público.
 
 ## Próximas lacunas verificáveis
 
-1. Incluir `correlation_id` no envelope JSON público sem vazar detalhe interno.
-2. Definir eventos/níveis de log para login falho repetido, `429`, `5xx` e
+1. Definir eventos/níveis de log para login falho repetido, `429`, `5xx` e
    exaustão de pool, mantendo regras de alerta fora do Git público.
-3. Executar build e scan Trivy da imagem final.
-4. Criar teste controlado de saturação de concorrência/DB e slow request.
-5. Escolher licença do projeto e registrar compatibilidade das dependências.
+2. Executar build e scan Trivy da imagem final.
+3. Criar teste controlado de saturação de concorrência/DB e slow request.
+4. Escolher licença do projeto e registrar compatibilidade das dependências.

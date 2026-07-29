@@ -2,7 +2,7 @@
 
 - **Status:** em execução
 - **Criado em:** 2026-07-25
-- **Última atualização:** 2026-07-28
+- **Última atualização:** 2026-07-29
 
 ## Objetivo
 
@@ -25,7 +25,7 @@ migrations, tratamento de erros e gates automáticos de qualidade.
 - [x] Criar migrations up/down para usuários, sessões e ativos, incluindo
   constraints e índices; validar ciclo completo em banco descartável.
 - [ ] Separar credenciais de migration e runtime com menor privilégio.
-- [ ] Implementar erro interno tipado e resposta pública estável com
+- [x] Implementar erro interno tipado e resposta pública estável com
   `correlation_id`; eliminar panics de caminhos normais.
 - [x] Configurar tracing estruturado com redação de campos sensíveis.
 - [x] Implementar `/health/live` e `/health/ready` sem revelar configuração.
@@ -37,13 +37,12 @@ migrations, tratamento de erros e gates automáticos de qualidade.
 - [x] Ambiente limpo sobe com instruções documentadas.
 - [x] Migrations aplicam, revertem e reaplicam sem erro.
 - [x] Aplicação recusa configuração inválida e não imprime segredo.
-- [ ] Readiness falha quando o banco está indisponível; liveness continua útil.
+- [x] Readiness falha quando o banco está indisponível; liveness continua útil.
 - [ ] Pipeline inteiro está verde.
 
 ## Pendências de validação
 
 - Separar usuário de migration e usuário runtime em ambiente de desenvolvimento.
-- Incluir `correlation_id` no envelope público de erro, não apenas no header.
 - Decidir se a aplicação deve iniciar sem conexão inicial ao banco para manter
   `/health/live` disponível quando o PostgreSQL estiver fora, ou se falha de
   startup é a política desejada para produção.
@@ -63,6 +62,13 @@ migrations, tratamento de erros e gates automáticos de qualidade.
 - `sqlx migrate run`
 - `GET /health/live` respondeu `{"status":"live"}`
 - `GET /health/ready` respondeu `{"status":"ready"}`
+
+## Validação executada em 2026-07-29
+
+- Testes HTTP do router validam `correlation_id` no envelope público de erro e
+  header `x-request-id` correspondente.
+- Teste HTTP valida `/health/ready` retornando `503` controlado quando o banco
+  está indisponível.
 
 ## Riscos e mitigação
 

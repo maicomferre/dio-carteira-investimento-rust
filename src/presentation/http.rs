@@ -88,6 +88,7 @@ struct ErrorBody {
 struct PublicError {
     code: &'static str,
     message: &'static str,
+    correlation_id: String,
 }
 
 #[derive(Debug, serde::Deserialize)]
@@ -1244,13 +1245,25 @@ impl IntoResponse for AppError {
             ),
         };
 
-        (
+        let correlation_id = Uuid::new_v4().to_string();
+        let mut response = (
             status,
             Json(ErrorBody {
-                error: PublicError { code, message },
+                error: PublicError {
+                    code,
+                    message,
+                    correlation_id: correlation_id.clone(),
+                },
             }),
         )
-            .into_response()
+            .into_response();
+        if let Ok(header_value) = HeaderValue::from_str(&correlation_id) {
+            response
+                .headers_mut()
+                .insert(HeaderName::from_static(REQUEST_ID_HEADER), header_value);
+        }
+
+        response
     }
 }
 
@@ -1346,9 +1359,20 @@ mod tests {
 
     async fn assert_public_error(response: Response, status: StatusCode, code: &str) {
         assert_eq!(response.status(), status);
+        let header_correlation_id = response
+            .headers()
+            .get(REQUEST_ID_HEADER)
+            .and_then(|value| value.to_str().ok())
+            .map(str::to_owned)
+            .expect("error response includes x-request-id");
         let json = json_body(response).await;
         assert_eq!(json["error"]["code"], code);
         assert!(json["error"]["message"].as_str().is_some());
+        assert_eq!(
+            json["error"]["correlation_id"].as_str(),
+            Some(header_correlation_id.as_str())
+        );
+        assert!(Uuid::parse_str(&header_correlation_id).is_ok());
     }
 
     #[test]
@@ -1478,6 +1502,12 @@ mod tests {
 
         assert_eq!(json["error"]["code"], "internal_error");
         assert_eq!(json["error"]["message"], "erro interno");
+        assert!(
+            json["error"]["correlation_id"]
+                .as_str()
+                .and_then(|value| Uuid::parse_str(value).ok())
+                .is_some()
+        );
     }
 
     #[tokio::test]
