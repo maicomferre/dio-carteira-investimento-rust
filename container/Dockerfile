@@ -27,6 +27,8 @@ WORKDIR /app
 COPY --from=builder /app/target/release/carteira-de-investimentos-maicaosa /usr/local/bin/carteira
 COPY --from=builder /app/static ./static
 
+USER 65532:65532
+
 ENV APP_BIND_ADDR=0.0.0.0:3000
 EXPOSE 3000
 

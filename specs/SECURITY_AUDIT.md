@@ -5,6 +5,7 @@
 ## Comandos executados
 
 - `npm audit --audit-level=moderate`
+- `npm run audit:public-boundary`
 - `cargo audit`
 - `trivy --version`
 - `trivy fs --scanners vuln,secret,misconfig --skip-dirs target --skip-dirs node_modules --skip-dirs .git --severity HIGH,CRITICAL --exit-code 0 .`
@@ -18,6 +19,8 @@
 ## Resultado registrado
 
 - `npm audit`: 0 vulnerabilidades reportadas.
+- `npm run audit:public-boundary`: nenhum artefato privado de VPS/host/deploy
+  detectado em arquivos versionados ou pendentes.
 - `cargo audit`: inicialmente encontrou `RUSTSEC-2023-0071` em `rsa 0.9.10`,
   trazido por `jsonwebtoken`. Como a aplicação usa apenas HS256, `jsonwebtoken`
   foi removido e substituído por uma implementação interna mínima de JWT HS256
@@ -29,7 +32,7 @@
   `perl-base`, `curl` e util-linux. A imagem foi alterada para
   `gcr.io/distroless/cc-debian13:nonroot`; novo scan da imagem final reportou
   0 HIGH/CRITICAL.
-- `npm run audit:container-baseline`: validou usuário runtime `65532`,
+- `npm run audit:container-baseline`: validou usuário runtime `65532:65532`,
   entrypoint `/usr/local/bin/carteira`, working directory `/app`, porta interna
   `3000/tcp`, `APP_BIND_ADDR=0.0.0.0:3000`, ausência de healthcheck embutido,
   ausência de shell configurado e ausência de `/bin/sh`, `/bin/bash`, `apt-get`,

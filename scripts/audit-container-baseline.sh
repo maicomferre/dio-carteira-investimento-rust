@@ -57,7 +57,7 @@ env_values="$(docker image inspect "${IMAGE_TAG}" --format '{{json .Config.Env}}
 healthcheck="$(docker image inspect "${IMAGE_TAG}" --format '{{json .Config.Healthcheck}}')"
 shell="$(docker image inspect "${IMAGE_TAG}" --format '{{json .Config.Shell}}')"
 
-expect_equal "usuário runtime" "${user}" "65532"
+expect_equal "usuário runtime" "${user}" "65532:65532"
 expect_equal "entrypoint" "${entrypoint}" '["/usr/local/bin/carteira"]'
 expect_equal "working directory" "${working_dir}" "/app"
 expect_contains "porta exposta" "${exposed_ports}" '"3000/tcp"'
