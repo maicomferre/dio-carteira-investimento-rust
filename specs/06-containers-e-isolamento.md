@@ -106,7 +106,7 @@ comprometimento de host. Ser Rust em vez de Laravel não influencia a decisão.
 - [ ] Testar restauração, restart, OOM controlado e indisponibilidade do DB.
 - [ ] Medir o VPS real e registrar a decisão same-host/separate-host em
   documentação privada, sem inventário sensível no Git público.
-- [ ] Criar gate que rejeite arquivos/padrões de Nginx, Fail2ban, firewall,
+- [x] Criar gate que rejeite arquivos/padrões de Nginx, Fail2ban, firewall,
   deploy remoto, chaves, `.env` e identificadores conhecidos da infraestrutura.
 
 ## Critérios de aceitação

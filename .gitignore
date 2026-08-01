@@ -19,10 +19,14 @@ reports/security/*.tar
 # Private production/VPS material must not enter the public repository.
 scripts/nginx/
 scripts/security/
-scripts/ops/deploy.config
-scripts/ops/release-to-vps.sh
-scripts/ops/deploy-artifact.sh
+scripts/ops/
 scripts/ops/*.local
+scripts/docker/.env*
+scripts/docker/*token*
+scripts/docker/*deploy*
+scripts/docker/*cron*
 infra/
 deploy/
+backups/
+private/
 *.local

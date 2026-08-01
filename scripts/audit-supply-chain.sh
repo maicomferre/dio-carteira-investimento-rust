@@ -7,6 +7,8 @@ mkdir -p "${REPORT_DIR}"
 
 cd "${PROJECT_ROOT}"
 
+./scripts/check-public-boundary.sh
+
 echo "== Rust advisory audit =="
 if command -v cargo-audit >/dev/null 2>&1; then
   cargo audit

@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "audit:public-boundary": "./scripts/check-public-boundary.sh",
     "audit:container-baseline": "./scripts/audit-container-baseline.sh",
     "audit:container": "./scripts/audit-container-image.sh",
     "audit:supply-chain": "./scripts/audit-supply-chain.sh",

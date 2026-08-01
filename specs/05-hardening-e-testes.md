@@ -70,6 +70,9 @@ Top 10:2025, além de resiliência a abuso e falhas externas.
   - [x] Cenários HTTP completos cobrem respostas públicas de `401`, `403`,
     `422`, `429`, `500` e indisponibilidade controlada `503` pelo router Axum.
 - [x] Executar auditoria Rust/npm, licença, segredo e gerar SBOM.
+  - `npm run audit:public-boundary`: bloqueia artefatos privados de VPS, Nginx,
+    Fail2ban, firewall, deploy remoto, `.env`, chaves, tokens e scripts de host
+    antes de publicar o repositório.
   - `npm audit --audit-level=moderate`: 0 vulnerabilidades.
   - `cargo audit`: removeu dependência vulnerável `rsa` via troca de JWT para
     HS256 interno; nova execução sem vulnerabilidades.
@@ -86,6 +89,10 @@ Top 10:2025, além de resiliência a abuso e falhas externas.
     `db.readiness_failed`.
   - Métricas, thresholds, dashboards e regras concretas do host ficam privados;
     o contrato público está em [`SECURITY_EVENTS.md`](SECURITY_EVENTS.md).
+- [x] Criar gate público contra vazamento operacional.
+  - O gate consulta arquivos versionados e pendentes, falhando se encontrar
+    material de host/deploy, scripts de Nginx/Fail2ban/firewall, comunicação
+    remota, secrets ou chaves. Detalhes efetivos do VPS continuam privados.
 
 ## Critérios de aceitação
 

@@ -1,8 +1,8 @@
 # Fase 7 — Implantação e operação em Linux
 
-- **Status:** planejada
+- **Status:** em implementação
 - **Criado em:** 2026-07-25
-- **Última atualização:** 2026-07-28
+- **Última atualização:** 2026-08-01
 
 ## Objetivo
 
@@ -71,6 +71,9 @@ logs por serviço, deploy atômico e secrets fora da release.
   infraestrutura; o público contém apenas exemplos com placeholders.
 - [ ] Não versionar nem mesmo templates de Nginx, Fail2ban, firewall, systemd,
   backup ou comunicação SSH no repositório da aplicação.
+  - [x] Gate público `npm run audit:public-boundary` bloqueia esses artefatos e
+    padrões antes de commit/publicação. Ele é intencionalmente genérico para não
+    revelar a infraestrutura real.
 - [ ] Automatizar backup PostgreSQL, retenção, criptografia e teste real de
   restauração em banco isolado.
 - [ ] Documentar deploy, rollback, rotação de chave, incidente e atualização.
