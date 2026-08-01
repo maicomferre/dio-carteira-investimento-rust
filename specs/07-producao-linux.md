@@ -52,6 +52,8 @@ logs por serviço, deploy atômico e secrets fora da release.
 - [ ] Criar endpoint DNS dedicado somente na configuração privada.
 - [ ] Integrar os controles compartilhados do host sem trazer scripts,
   parâmetros ou inventário para o repositório público.
+  - [x] Contrato público de evidência para slow requests, probes e proteção de
+    borda definido em [`EDGE_PRIVATE_VALIDATION.md`](EDGE_PRIVATE_VALIDATION.md).
 - [ ] Adaptar a infraestrutura privada ao contrato acima, usando Nginx como
   reverse proxy e mantendo o app Rust inacessível diretamente pela Internet.
 - [ ] Seguir deploy atômico privado com artefato imutável, diretório
@@ -90,6 +92,8 @@ logs por serviço, deploy atômico e secrets fora da release.
   da produção nem referência aos repositórios privados.
 - [ ] Restore recupera dados e aplicação inicia sobre o banco restaurado.
 - [ ] Falha de DB/proxy/restart produz logs e recuperação conforme o runbook.
+  - A evidência pública pode indicar apenas aprovado/reprovado, data e hash do
+    artefato; saídas brutas e comandos operacionais ficam privados.
 
 ## Riscos e mitigação
 

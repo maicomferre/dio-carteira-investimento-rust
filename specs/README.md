@@ -46,6 +46,8 @@ Documentos de evidência e operação pública:
   dependências, filesystem, SBOM e segredos.
 - [`SECURITY_EVENTS.md`](SECURITY_EVENTS.md) — eventos públicos de segurança e
   operação emitidos pela aplicação, sem regras privadas de alerta.
+- [`EDGE_PRIVATE_VALIDATION.md`](EDGE_PRIVATE_VALIDATION.md) — contrato público
+  para validações privadas de proxy, slow requests e perímetro Linux.
 
 Testes acompanham cada fase. A fase 5 valida o conjunto e fecha lacunas, não
 adia segurança para o fim. Decisões novas entram na tabela do plano afetado e,

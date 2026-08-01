@@ -58,8 +58,11 @@ Top 10:2025, além de resiliência a abuso e falhas externas.
     controlado com `correlation_id`.
   - [x] Saturação controlada de pool PostgreSQL: teste mantém a única conexão
     ocupada e valida `/health/ready` retornando `503` com envelope público.
-  - [ ] Slow requests no proxy privado; não versionar configuração real de
-    Nginx/Fail2ban/firewall neste repositório público.
+  - [x] Contrato público de validação privada para slow requests, probes e borda
+    Linux definido em [`EDGE_PRIVATE_VALIDATION.md`](EDGE_PRIVATE_VALIDATION.md).
+  - [ ] Executar os testes reais de slow request no proxy privado antes de
+    produção; não versionar configuração real de Nginx/Fail2ban/firewall neste
+    repositório público.
 - [x] Aplicar CSP, HSTS no perfil HTTPS, nosniff, referrer/frame policy e
   `Cache-Control: no-store` em conteúdo autenticado.
 - [ ] Criar testes para CSRF, XSS armazenado/refletido, SQLi, IDOR, mass
@@ -110,6 +113,8 @@ Top 10:2025, além de resiliência a abuso e falhas externas.
 - [x] Excesso acima do rate limit da aplicação retorna `429` previsível.
 - [ ] Saturação de concorrência/DB e slow request degradam de forma previsível e
   recuperam depois em teste controlado.
+  - Concorrência e DB têm testes automatizados no repositório público; slow
+    request depende de execução privada na borda Linux.
 
 ## Riscos e mitigação
 
