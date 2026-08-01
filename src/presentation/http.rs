@@ -1295,6 +1295,8 @@ mod tests {
 
     const TEST_DATABASE_URL: &str =
         "postgres://carteira_app:carteira_app_dev_password@127.0.0.1:65432/carteira_dev";
+    const DEV_DATABASE_URL: &str =
+        "postgres://carteira_app:carteira_app_dev_password@127.0.0.1:5433/carteira_dev";
 
     fn auth_config() -> AuthConfig {
         AuthConfig {
@@ -1344,6 +1346,20 @@ mod tests {
             .acquire_timeout(Duration::from_millis(100))
             .connect_lazy(TEST_DATABASE_URL)
             .expect("lazy test database pool")
+    }
+
+    async fn saturated_pool() -> (PgPool, sqlx::pool::PoolConnection<sqlx::Postgres>) {
+        let database_url =
+            std::env::var("DATABASE_URL").unwrap_or_else(|_| DEV_DATABASE_URL.to_owned());
+        let pool = PgPoolOptions::new()
+            .max_connections(1)
+            .acquire_timeout(Duration::from_millis(50))
+            .connect(&database_url)
+            .await
+            .expect("database connection for pool saturation test");
+        let held_connection = pool.acquire().await.expect("hold only database connection");
+
+        (pool, held_connection)
     }
 
     fn test_router(auth: AuthConfig) -> Router {
@@ -1662,6 +1678,31 @@ mod tests {
             ))
             .await
             .expect("route response");
+
+        assert_public_error(
+            response,
+            StatusCode::SERVICE_UNAVAILABLE,
+            "service_unavailable",
+        )
+        .await;
+    }
+
+    #[tokio::test]
+    async fn http_readiness_with_saturated_database_pool_returns_controlled_503() {
+        let (pool, _held_connection) = saturated_pool().await;
+        let response = build_router(
+            pool,
+            http_config(),
+            auth_config(),
+            instrument_provider_config(),
+        )
+        .oneshot(request(
+            axum::http::Method::GET,
+            "/health/ready",
+            Body::empty(),
+        ))
+        .await
+        .expect("route response");
 
         assert_public_error(
             response,

@@ -56,7 +56,8 @@ Top 10:2025, além de resiliência a abuso e falhas externas.
   - [x] Concorrência interna: teste HTTP mantém uma rota lenta sob `#[cfg(test)]`
     ocupando o único slot e valida que a segunda requisição recebe `503`
     controlado com `correlation_id`.
-  - [ ] Saturação controlada de pool PostgreSQL.
+  - [x] Saturação controlada de pool PostgreSQL: teste mantém a única conexão
+    ocupada e valida `/health/ready` retornando `503` com envelope público.
   - [ ] Slow requests no proxy privado; não versionar configuração real de
     Nginx/Fail2ban/firewall neste repositório público.
 - [x] Aplicar CSP, HSTS no perfil HTTPS, nosniff, referrer/frame policy e
