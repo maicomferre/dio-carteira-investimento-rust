@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "audit:container": "./scripts/audit-container-image.sh",
     "audit:supply-chain": "./scripts/audit-supply-chain.sh",
     "build": "tsc && npm run copy:assets",
     "check": "tsc --noEmit",

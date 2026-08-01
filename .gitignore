@@ -14,6 +14,7 @@ static/dist/
 static/vendor/
 reports/security/*.json
 reports/security/*.cdx
+reports/security/*.tar
 
 # Private production/VPS material must not enter the public repository.
 scripts/nginx/
