@@ -17,20 +17,31 @@ static MIGRATOR: sqlx::migrate::Migrator = sqlx::migrate!("./migrations");
 
 async fn pool() -> PgPool {
     let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| {
-        "postgres://carteira_app:carteira_app_dev_password@127.0.0.1:5433/carteira_dev".to_owned()
+        "postgres://carteira_runtime:carteira_runtime_dev_password@127.0.0.1:5433/carteira_dev"
+            .to_owned()
     });
-    let pool = PgPoolOptions::new()
-        .max_connections(5)
-        .connect(&database_url)
+    let migration_database_url = std::env::var("DATABASE_MIGRATION_URL").unwrap_or_else(|_| {
+        "postgres://carteira_migrator:carteira_migrator_dev_password@127.0.0.1:5433/carteira_dev"
+            .to_owned()
+    });
+    let migration_pool = PgPoolOptions::new()
+        .max_connections(1)
+        .connect(&migration_database_url)
         .await
-        .expect("database connection for integration tests");
+        .expect("migration database connection for integration tests");
 
     MIGRATOR
-        .run(&pool)
+        .run(&migration_pool)
         .await
         .expect("database migrations for integration tests");
 
-    pool
+    migration_pool.close().await;
+
+    PgPoolOptions::new()
+        .max_connections(5)
+        .connect(&database_url)
+        .await
+        .expect("runtime database connection for integration tests")
 }
 
 async fn create_user(pool: &PgPool) -> Uuid {
@@ -54,6 +65,27 @@ async fn create_user(pool: &PgPool) -> Uuid {
 
 fn assert_validation(error: AppError) {
     assert!(matches!(error, AppError::Validation(_)), "{error:?}");
+}
+
+#[tokio::test]
+async fn runtime_database_user_cannot_create_schema_objects() {
+    let pool = pool().await;
+    let table_name = format!("runtime_privilege_probe_{}", Uuid::new_v4().simple());
+    let create_sql = format!("CREATE TABLE public.{table_name} (id INTEGER)");
+
+    // Audited: `table_name` is generated internally from a UUID and never
+    // contains user input. The dynamic DDL exists only to prove least privilege.
+    if sqlx::query(sqlx::AssertSqlSafe(create_sql))
+        .execute(&pool)
+        .await
+        .is_ok()
+    {
+        let drop_sql = format!("DROP TABLE public.{table_name}");
+        let _ = sqlx::query(sqlx::AssertSqlSafe(drop_sql))
+            .execute(&pool)
+            .await;
+        panic!("runtime database user must not have DDL privileges");
+    }
 }
 
 #[tokio::test]

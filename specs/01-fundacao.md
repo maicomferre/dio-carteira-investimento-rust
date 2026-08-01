@@ -24,7 +24,9 @@ migrations, tratamento de erros e gates automáticos de qualidade.
   localhost; usar healthcheck e volume nomeado.
 - [x] Criar migrations up/down para usuários, sessões e ativos, incluindo
   constraints e índices; validar ciclo completo em banco descartável.
-- [ ] Separar credenciais de migration e runtime com menor privilégio.
+- [x] Separar credenciais de migration e runtime com menor privilégio.
+  - Dev usa `DATABASE_MIGRATION_URL` para SQLx migrations e `DATABASE_URL` para
+    a aplicação. O usuário runtime não deve ter privilégio de DDL.
 - [x] Implementar erro interno tipado e resposta pública estável com
   `correlation_id`; eliminar panics de caminhos normais.
 - [x] Configurar tracing estruturado com redação de campos sensíveis.
@@ -42,7 +44,8 @@ migrations, tratamento de erros e gates automáticos de qualidade.
 
 ## Pendências de validação
 
-- Separar usuário de migration e usuário runtime em ambiente de desenvolvimento.
+- Credenciais reais de produção e rotação permanecem no repositório privado de
+  infraestrutura; este Git contém somente nomes/segredos de desenvolvimento.
 - Decidir se a aplicação deve iniciar sem conexão inicial ao banco para manter
   `/health/live` disponível quando o PostgreSQL estiver fora, ou se falha de
   startup é a política desejada para produção.

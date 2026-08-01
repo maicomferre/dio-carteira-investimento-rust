@@ -67,6 +67,8 @@ logs por serviço, deploy atômico e secrets fora da release.
 - [ ] Guardar secrets fora de imagem/repositório, com permissões mínimas.
 - [ ] Definir CPU/memória/PIDs/file descriptors e política de restart.
 - [ ] Executar migration como job separado antes da troca de versão.
+  - O contrato público exige credencial separada da aplicação; comando, usuário,
+    path e orquestração reais ficam privados.
 - [ ] Fazer deploy por imagem/artefato imutável identificado pelo commit,
   smoke-test e promoção; rollback troca para a imagem anterior, nunca rebuilda.
 - [ ] Manter a configuração real de deploy em repositório privado de
@@ -88,6 +90,8 @@ logs por serviço, deploy atômico e secrets fora da release.
 - [ ] Scan externo privado encontra apenas serviços intencionalmente publicados.
 - [ ] HTTP redireciona para HTTPS e cookies seguros funcionam.
 - [ ] Processo não roda como root e não possui credencial de migration.
+  - Em desenvolvimento, `cargo run` usa apenas `DATABASE_URL`; migrations usam
+    `DATABASE_MIGRATION_URL` via `npm run db:migrate`.
 - [ ] Busca no histórico Git público não encontra domínio/IP/SSH/path/inventário
   da produção nem referência aos repositórios privados.
 - [ ] Restore recupera dados e aplicação inicia sobre o banco restaurado.

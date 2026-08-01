@@ -23,7 +23,7 @@ corretoras, ativos, movimentações e resumo da carteira.
 ```bash
 cp .env.example .env
 docker compose -f docker-compose.dev.yml up -d
-sqlx migrate run
+npm run db:migrate
 cargo run
 ```
 
@@ -36,6 +36,10 @@ npm run build
 
 O PostgreSQL de desenvolvimento é publicado em `127.0.0.1:5433` para evitar
 conflito com instalações locais que já usam a porta padrão `5432`.
+
+O ambiente local usa duas credenciais: `DATABASE_MIGRATION_URL` para migrations
+e `DATABASE_URL` para runtime. A aplicação não deve rodar com usuário capaz de
+alterar schema.
 
 Se o `sqlx-cli` não estiver instalado:
 

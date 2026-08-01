@@ -98,6 +98,10 @@ comprometimento de host. Ser Rust em vez de Laravel não influencia a decisão.
   `/health/live`; o mecanismo real de healthcheck fica na infraestrutura
   privada para não revelar topologia.
 - [ ] Separar job/container de migration com credencial própria da aplicação.
+  - [x] Contrato público e desenvolvimento local usam credenciais separadas:
+    `DATABASE_MIGRATION_URL` para migrations e `DATABASE_URL` para runtime.
+  - [ ] Job/container real de migration em produção fica no repositório privado
+    de infraestrutura.
 - [ ] Escanear imagem e filesystem com Trivy; gerar SBOM e revisar licenças.
   - [x] Filesystem scan e SBOM público/repetível via
     `npm run audit:supply-chain`.

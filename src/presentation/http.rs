@@ -1294,9 +1294,9 @@ mod tests {
     use tower::ServiceExt;
 
     const TEST_DATABASE_URL: &str =
-        "postgres://carteira_app:carteira_app_dev_password@127.0.0.1:65432/carteira_dev";
+        "postgres://carteira_runtime:carteira_runtime_dev_password@127.0.0.1:65432/carteira_dev";
     const DEV_DATABASE_URL: &str =
-        "postgres://carteira_app:carteira_app_dev_password@127.0.0.1:5433/carteira_dev";
+        "postgres://carteira_runtime:carteira_runtime_dev_password@127.0.0.1:5433/carteira_dev";
 
     fn auth_config() -> AuthConfig {
         AuthConfig {
