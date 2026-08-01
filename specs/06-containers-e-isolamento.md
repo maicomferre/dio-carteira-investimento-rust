@@ -1,8 +1,8 @@
 # Fase 6 — Containers, isolamento e decisão de VPS
 
-- **Status:** planejada
+- **Status:** em implementação
 - **Criado em:** 2026-07-25
-- **Última atualização:** 2026-07-28
+- **Última atualização:** 2026-08-01
 
 ## Contexto e decisão
 
@@ -62,9 +62,10 @@ comprometimento de host. Ser Rust em vez de Laravel não influencia a decisão.
 
 ## Controles OWASP Docker Top 10
 
-- **D01 — Secure User Mapping:** imagem roda com UID/GID non-root dedicado.
+- **D01 — Secure User Mapping:** imagem roda como usuário non-root da base
+  distroless.
 - **D02 — Patch Management:** base mínima suportada, rebuild periódico e SLA
-  para CVEs; não instalar ferramentas de build na imagem final.
+  para CVEs; ferramentas de build ficam somente no estágio builder.
 - **D03 — Network Segmentation:** redes por finalidade; DB interno; app não
   diretamente roteável pela Internet; sem acesso ao Docker socket. Detalhes da
   ligação com o gateway pertencem à infraestrutura privada.
@@ -85,17 +86,22 @@ comprometimento de host. Ser Rust em vez de Laravel não influencia a decisão.
 
 ## Tarefas
 
-- [ ] Produzir Dockerfile multi-stage; imagem final mínima, non-root e sem Cargo,
-  npm, shell ou package manager quando tecnicamente viável.
-- [ ] Criar somente Compose de desenvolvimento neutro; o Compose de produção é
+- [x] Produzir Dockerfile multi-stage; imagem final mínima, non-root e sem Cargo,
+  npm, shell ou package manager.
+- [x] Criar `.dockerignore` para reduzir contexto e impedir envio acidental de
+  arquivos locais, relatórios e materiais privados ao build.
+- [x] Criar somente Compose de desenvolvimento neutro; o Compose de produção é
   criado e mantido no repositório privado de infraestrutura.
-- [ ] Definir healthcheck, `init`, stop grace, restart policy, CPU, memória, PIDs,
-  rootfs, tmpfs, capabilities, logging e volumes.
+- [ ] Definir `init`, stop grace, restart policy, CPU, memória, PIDs, rootfs,
+  tmpfs, capabilities, logging e volumes no Compose/host privado.
+- [x] Definir contrato público de porta interna `3000` e health endpoint
+  `/health/live`; o mecanismo real de healthcheck fica na infraestrutura
+  privada para não revelar topologia.
 - [ ] Separar job/container de migration com credencial própria da aplicação.
 - [ ] Escanear imagem e filesystem com Trivy; gerar SBOM e revisar licenças.
   - [x] Filesystem scan e SBOM público/repetível via
     `npm run audit:supply-chain`.
-  - [ ] Scan da imagem final ainda depende do build/tag da imagem de produção.
+  - [x] Build e scan da imagem final local via `npm run audit:container`.
 - [ ] Criar auditoria automática de `docker inspect` contra o baseline.
 - [ ] Testar restauração, restart, OOM controlado e indisponibilidade do DB.
 - [ ] Medir o VPS real e registrar a decisão same-host/separate-host em
@@ -108,8 +114,8 @@ comprometimento de host. Ser Rust em vez de Laravel não influencia a decisão.
 - [ ] Teste privado confirma que somente o gateway alcança o app e que o DB não
   é acessível externamente; o resultado público não revela a topologia.
 - [ ] App roda non-root, sem capabilities, sem Docker socket e com limites.
-- [ ] Imagem não contém segredo, source tree desnecessária ou ferramentas de build.
-- [ ] Scan não possui vulnerabilidade alta/crítica com correção disponível.
+- [x] Imagem não contém segredo, source tree desnecessária ou ferramentas de build.
+- [x] Scan não possui vulnerabilidade alta/crítica com correção disponível.
 - [ ] O checklist D01–D10 aponta para configuração e teste verificáveis.
 - [ ] A escolha de VPS é suportada por métricas, não pela linguagem utilizada.
 
