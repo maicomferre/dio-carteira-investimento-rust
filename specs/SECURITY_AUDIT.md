@@ -12,6 +12,7 @@
 - `docker build -f container/Dockerfile -t carteira-investimentos:local .`
 - `docker save carteira-investimentos:local -o reports/security/carteira-investimentos-local.tar`
 - `trivy image --input reports/security/carteira-investimentos-local.tar --scanners vuln,secret,misconfig --severity HIGH,CRITICAL --exit-code 0`
+- `npm run audit:container-baseline`
 - varredura local por nomes e padrões sensíveis em arquivos versionáveis.
 
 ## Resultado registrado
@@ -28,6 +29,11 @@
   `perl-base`, `curl` e util-linux. A imagem foi alterada para
   `gcr.io/distroless/cc-debian13:nonroot`; novo scan da imagem final reportou
   0 HIGH/CRITICAL.
+- `npm run audit:container-baseline`: validou usuário runtime `65532`,
+  entrypoint `/usr/local/bin/carteira`, working directory `/app`, porta interna
+  `3000/tcp`, `APP_BIND_ADDR=0.0.0.0:3000`, ausência de healthcheck embutido,
+  ausência de shell configurado e ausência de `/bin/sh`, `/bin/bash`, `apt-get`,
+  `npm`, `node` e `cargo` no runtime.
 - `npm run audit:supply-chain`: concluiu com sucesso e gerou SBOM CycloneDX em
   `reports/security/sbom.cdx.json`, ignorado pelo Git.
 - Varredura por nomes sensíveis: não encontrou `.env`, `.pem`, `.key` ou
@@ -42,13 +48,15 @@ Use:
 ```bash
 ./scripts/audit-supply-chain.sh
 npm run audit:container
+npm run audit:container-baseline
 ```
 
 O primeiro script roda auditoria Rust quando `cargo-audit` estiver instalado,
 auditoria npm, Trivy filesystem e geração de SBOM CycloneDX. O segundo script
-faz build da imagem, exporta o tar local e executa Trivy na imagem final. Os
-artefatos gerados em `reports/security/` são ignorados pelo Git para evitar
-snapshots ruidosos no repositório público.
+faz build da imagem, exporta o tar local, executa Trivy na imagem final e roda
+o baseline público. O terceiro script roda apenas o baseline de metadados da
+imagem já construída. Os artefatos gerados em `reports/security/` são ignorados
+pelo Git para evitar snapshots ruidosos no repositório público.
 
 ## Limites conhecidos
 

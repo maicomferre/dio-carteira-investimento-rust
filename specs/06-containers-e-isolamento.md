@@ -102,7 +102,7 @@ comprometimento de host. Ser Rust em vez de Laravel não influencia a decisão.
   - [x] Filesystem scan e SBOM público/repetível via
     `npm run audit:supply-chain`.
   - [x] Build e scan da imagem final local via `npm run audit:container`.
-- [ ] Criar auditoria automática de `docker inspect` contra o baseline.
+- [x] Criar auditoria automática de `docker inspect` contra o baseline público.
 - [ ] Testar restauração, restart, OOM controlado e indisponibilidade do DB.
 - [ ] Medir o VPS real e registrar a decisão same-host/separate-host em
   documentação privada, sem inventário sensível no Git público.
@@ -116,7 +116,9 @@ comprometimento de host. Ser Rust em vez de Laravel não influencia a decisão.
 - [ ] App roda non-root, sem capabilities, sem Docker socket e com limites.
 - [x] Imagem não contém segredo, source tree desnecessária ou ferramentas de build.
 - [x] Scan não possui vulnerabilidade alta/crítica com correção disponível.
-- [ ] O checklist D01–D10 aponta para configuração e teste verificáveis.
+- [x] O checklist público D01, D02, D08 e D09 aponta para configuração e teste
+  verificáveis; D03, D04, D05, D07 e D10 dependem também da configuração
+  privada do runtime/host.
 - [ ] A escolha de VPS é suportada por métricas, não pela linguagem utilizada.
 
 ## Riscos e mitigação

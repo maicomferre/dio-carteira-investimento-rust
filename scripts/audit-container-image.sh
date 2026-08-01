@@ -33,4 +33,6 @@ trivy image \
   --severity HIGH,CRITICAL \
   --exit-code 1
 
+./scripts/audit-container-baseline.sh "${IMAGE_TAG}"
+
 echo "Scan da imagem concluído sem HIGH/CRITICAL em ${IMAGE_TAG}."
