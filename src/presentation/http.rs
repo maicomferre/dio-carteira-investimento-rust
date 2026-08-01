@@ -332,7 +332,7 @@ pub fn build_router(
         instrument_provider: CachedInstrumentProvider::new(instrument_provider_config),
     };
 
-    Router::new()
+    let router = Router::new()
         .route("/", get(root))
         .route("/login", get(login_page).post(login_form))
         .route("/register", get(register_page).post(register_form))
@@ -357,7 +357,12 @@ pub fn build_router(
         .route("/api/transactions/buy", post(record_purchase))
         .route("/api/transactions/sell", post(record_sale))
         .route("/api/portfolio/summary", get(portfolio_summary))
-        .nest_service("/static", ServeDir::new("static"))
+        .nest_service("/static", ServeDir::new("static"));
+
+    #[cfg(test)]
+    let router = router.route("/__test/slow", get(test_slow_endpoint));
+
+    router
         .with_state(state.clone())
         .layer(PropagateRequestIdLayer::new(request_id_header.clone()))
         .layer(SetRequestIdLayer::new(request_id_header, MakeRequestUuid))
@@ -561,6 +566,12 @@ async fn logout_form(
 
 async fn liveness() -> Json<HealthStatus> {
     Json(HealthStatus::live())
+}
+
+#[cfg(test)]
+async fn test_slow_endpoint() -> StatusCode {
+    tokio::time::sleep(Duration::from_millis(200)).await;
+    StatusCode::OK
 }
 
 async fn readiness(State(state): State<AppState>) -> Result<Json<HealthStatus>, AppError> {
@@ -1599,6 +1610,46 @@ mod tests {
             .expect("second route response");
 
         assert_public_error(second, StatusCode::TOO_MANY_REQUESTS, "rate_limited").await;
+    }
+
+    #[tokio::test]
+    async fn http_concurrency_saturation_returns_controlled_503() {
+        let mut http = http_config();
+        http.max_concurrent_requests = 1;
+        let router = build_router(
+            lazy_pool(),
+            http,
+            auth_config(),
+            instrument_provider_config(),
+        );
+
+        let first_router = router.clone();
+        let first_request = request(axum::http::Method::GET, "/__test/slow", Body::empty());
+        let first_response = tokio::spawn(async move { first_router.oneshot(first_request).await });
+
+        tokio::time::sleep(Duration::from_millis(25)).await;
+
+        let second = router
+            .oneshot(request(
+                axum::http::Method::GET,
+                "/__test/slow",
+                Body::empty(),
+            ))
+            .await
+            .expect("second route response");
+
+        assert_public_error(
+            second,
+            StatusCode::SERVICE_UNAVAILABLE,
+            "service_unavailable",
+        )
+        .await;
+
+        let first = first_response
+            .await
+            .expect("first request task completed")
+            .expect("first route response");
+        assert_eq!(first.status(), StatusCode::OK);
     }
 
     #[tokio::test]

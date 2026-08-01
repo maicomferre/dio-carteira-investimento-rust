@@ -53,6 +53,12 @@ Top 10:2025, além de resiliência a abuso e falhas externas.
     mal configurado. O middleware interno limita por IP e isenta somente
     `/health/live` e `/health/ready`.
 - [ ] Testar slow requests no proxy e saturação controlada da aplicação/DB.
+  - [x] Concorrência interna: teste HTTP mantém uma rota lenta sob `#[cfg(test)]`
+    ocupando o único slot e valida que a segunda requisição recebe `503`
+    controlado com `correlation_id`.
+  - [ ] Saturação controlada de pool PostgreSQL.
+  - [ ] Slow requests no proxy privado; não versionar configuração real de
+    Nginx/Fail2ban/firewall neste repositório público.
 - [x] Aplicar CSP, HSTS no perfil HTTPS, nosniff, referrer/frame policy e
   `Cache-Control: no-store` em conteúdo autenticado.
 - [ ] Criar testes para CSRF, XSS armazenado/refletido, SQLi, IDOR, mass
