@@ -1353,10 +1353,9 @@ mod tests {
             std::env::var("DATABASE_URL").unwrap_or_else(|_| DEV_DATABASE_URL.to_owned());
         let pool = PgPoolOptions::new()
             .max_connections(1)
-            .acquire_timeout(Duration::from_millis(50))
-            .connect(&database_url)
-            .await
-            .expect("database connection for pool saturation test");
+            .acquire_timeout(Duration::from_millis(500))
+            .connect_lazy(&database_url)
+            .expect("lazy database pool for saturation test");
         let held_connection = pool.acquire().await.expect("hold only database connection");
 
         (pool, held_connection)

@@ -5,24 +5,11 @@ on:
   pull_request:
 
 jobs:
-  rust:
+  quality:
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:18.4
-        env:
-          POSTGRES_DB: carteira_test
-          POSTGRES_USER: carteira_app
-          POSTGRES_PASSWORD: carteira_app_test_password
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U carteira_app -d carteira_test"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
     env:
-      DATABASE_URL: postgres://carteira_app:carteira_app_test_password@localhost:5432/carteira_test
+      DATABASE_URL: postgres://carteira_runtime:carteira_runtime_dev_password@127.0.0.1:5433/carteira_dev
+      DATABASE_MIGRATION_URL: postgres://carteira_migrator:carteira_migrator_dev_password@127.0.0.1:5433/carteira_dev
       APP_ENV: test
       APP_BIND_ADDR: 127.0.0.1:3000
     steps:
@@ -30,8 +17,28 @@ jobs:
       - uses: dtolnay/rust-toolchain@1.95.0
         with:
           components: rustfmt, clippy
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run check
+      - run: npm run build
+      - run: npm run audit:public-boundary
+      - run: npm audit --audit-level=moderate
       - run: cargo fmt --all -- --check
+      - run: cargo install sqlx-cli --version 0.9.0 --locked --no-default-features --features postgres,rustls
+      - run: docker compose -f docker-compose.dev.yml up -d --wait
+      - run: npm run db:migrate
       - run: cargo clippy --all-targets --all-features -- -D warnings
       - run: cargo test --all-features
-      - run: cargo install sqlx-cli --version 0.9.0 --no-default-features --features postgres,rustls
-      - run: sqlx migrate run
+
+  rust-supply-chain:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@1.95.0
+      - run: cargo install cargo-audit --locked
+      - run: cargo install cargo-deny --locked
+      - run: cargo audit
+      - run: cargo deny check

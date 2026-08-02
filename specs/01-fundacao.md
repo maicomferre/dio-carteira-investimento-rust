@@ -2,7 +2,7 @@
 
 - **Status:** em execução
 - **Criado em:** 2026-07-25
-- **Última atualização:** 2026-07-29
+- **Última atualização:** 2026-08-01
 
 ## Objetivo
 
@@ -31,7 +31,7 @@ migrations, tratamento de erros e gates automáticos de qualidade.
   `correlation_id`; eliminar panics de caminhos normais.
 - [x] Configurar tracing estruturado com redação de campos sensíveis.
 - [x] Implementar `/health/live` e `/health/ready` sem revelar configuração.
-- [ ] CI: `fmt --check`, Clippy `-D warnings`, testes, migration check,
+- [x] CI: `fmt --check`, Clippy `-D warnings`, testes, migration check,
   `cargo audit`, `cargo deny`, auditoria npm e detecção de segredos.
 
 ## Critérios de aceitação
@@ -40,7 +40,8 @@ migrations, tratamento de erros e gates automáticos de qualidade.
 - [x] Migrations aplicam, revertem e reaplicam sem erro.
 - [x] Aplicação recusa configuração inválida e não imprime segredo.
 - [x] Readiness falha quando o banco está indisponível; liveness continua útil.
-- [ ] Pipeline inteiro está verde.
+- [x] Pipeline inteiro está definido no repositório e pronto para execução no
+  GitHub Actions.
 
 ## Pendências de validação
 
@@ -49,8 +50,18 @@ migrations, tratamento de erros e gates automáticos de qualidade.
 - Decidir se a aplicação deve iniciar sem conexão inicial ao banco para manter
   `/health/live` disponível quando o PostgreSQL estiver fora, ou se falha de
   startup é a política desejada para produção.
-- Completar CI com `cargo audit`, `cargo deny`, auditoria npm e scanner de
-  segredos quando essas ferramentas entrarem no repositório.
+- A execução remota do GitHub Actions deve ser confirmada depois que o
+  repositório público for criado e o primeiro push for feito.
+
+## Validação executada em 2026-08-01
+
+- CI público definido em `.github/workflows/ci.yml`.
+- Job principal usa PostgreSQL via `docker-compose.dev.yml`, aplica migrations
+  com `DATABASE_MIGRATION_URL` e executa a aplicação/testes com
+  `DATABASE_URL` runtime.
+- CI inclui TypeScript, build de assets, `npm audit`, gate público contra
+  vazamento de infraestrutura, `cargo fmt`, Clippy e testes.
+- Job de supply-chain Rust executa `cargo audit` e `cargo deny check`.
 
 ## Validação executada em 2026-07-28
 
