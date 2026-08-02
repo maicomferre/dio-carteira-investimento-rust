@@ -1,8 +1,8 @@
 # Fase 8 — Documentação e entrega DIO
 
-- **Status:** planejada
+- **Status:** em andamento
 - **Criado em:** 2026-07-25
-- **Última atualização:** 2026-07-25
+- **Última atualização:** 2026-08-02
 
 ## Objetivo
 
@@ -17,16 +17,16 @@ avaliar, demonstrando o aprendizado em vez de apenas apresentar código.
 
 ## Tarefas
 
-- [ ] Escrever README com objetivo, arquitetura, tecnologias, pré-requisitos,
+- [x] Escrever README com objetivo, arquitetura, tecnologias, pré-requisitos,
   configuração, execução, migrations e testes.
-- [ ] Explicar a melhoria autoral: isolamento por usuário, valores decimais,
+- [x] Explicar a melhoria autoral: isolamento por usuário, valores decimais,
   dashboard e segurança em camadas.
-- [ ] Registrar diferenças em relação ao repositório-base sem reproduzir código
+- [x] Registrar diferenças em relação ao repositório-base sem reproduzir código
   sem licença.
-- [ ] Incluir modelo de ameaça resumido e limitações honestas, especialmente
+- [x] Incluir modelo de ameaça resumido e limitações honestas, especialmente
   preço manual e mitigação parcial de DDoS.
 - [ ] Adicionar screenshots sem dados/segredos reais e exemplo de API sanitizado.
-- [ ] Publicar comandos de teste, cobertura e auditoria com resultados esperados.
+- [x] Publicar comandos de teste, cobertura e auditoria com resultados esperados.
 - [x] Escolher licença do projeto e conferir licenças das dependências.
 - [ ] Fazer instalação do zero seguindo apenas o README.
 - [ ] Revisar commits/PRs e garantir que nenhuma credencial ou artefato local
@@ -34,7 +34,7 @@ avaliar, demonstrando o aprendizado em vez de apenas apresentar código.
 
 ## Critérios de aceitação
 
-- [ ] O README responde exatamente aos seis itens exigidos pela DIO: o que faz,
+- [x] O README responde exatamente aos seis itens exigidos pela DIO: o que faz,
   como executar, tecnologias, melhoria, testes e aprendizados.
 - [ ] Um ambiente Linux limpo reproduz build, banco, migrations e testes.
 - [ ] Pipeline final está verde e evidências não contêm dados sensíveis.

@@ -1,108 +1,202 @@
 # Carteira de Investimentos
 
-Aplicação fullstack em Rust para o desafio DIO/Santander. O objetivo do MVP é
-permitir cadastro, autenticação e acompanhamento de ativos de investimento com
-Axum, PostgreSQL, SQLx, JWT/cookies e páginas Askama.
+Aplicação fullstack em Rust desenvolvida para o desafio DIO/Santander de
+Carteira de Investimentos. O sistema permite criar conta, autenticar usuário,
+cadastrar corretoras, cadastrar ativos, registrar compras e vendas e acompanhar
+a carteira por moeda, categoria, ativo e corretora.
 
-## Estado atual
+Este projeto foi desenvolvido como implementação própria a partir dos requisitos
+do desafio. O repositório-base da DIO foi usado como referência didática, sem
+copiar código sem licença declarada.
 
-O projeto já possui base técnica, autenticação e núcleo JSON da carteira. Existem
-estrutura por camadas, health checks, configuração por ambiente, migrations,
-PostgreSQL de desenvolvimento via Docker, registro/login/logout e rotas para
-corretoras, ativos, movimentações e resumo da carteira.
+## O que o projeto faz
 
-## Requisitos locais
+- Cadastro, login e logout com sessão em cookie `HttpOnly`.
+- Controle CSRF em mutações autenticadas.
+- Cadastro de corretoras usadas pelo investidor.
+- Cadastro de ativos com símbolo, mercado, categoria, moeda e preço atual.
+- Sugestão de metadados de instrumentos pelo backend.
+- Registro de compras e vendas com bloqueio de posição negativa.
+- Dashboard com avatar por iniciais, totais por moeda, distribuição por
+  categoria, participação por ativo, divisão por corretora e fluxo diário.
+- Extrato de movimentações para rastrear compras e vendas.
+- Health checks para execução em Linux atrás de um gateway HTTP.
 
-- Rust 1.95.0
-- Node.js/npm para compilar os assets TypeScript
-- Docker com Compose
-- PostgreSQL 18.4 via `docker-compose.dev.yml`
+O objetivo não é fazer recomendação financeira nem integração com corretoras
+reais. O preço atual é manual/indicativo no MVP.
 
-## Execução local
+## Tecnologias usadas
 
-```bash
-cp .env.example .env
-docker compose -f docker-compose.dev.yml up -d
-npm run db:migrate
-cargo run
+- Rust 1.95.0, Axum e Tokio para a aplicação web.
+- Askama para páginas HTML server-rendered.
+- PostgreSQL 18.4 com SQLx e migrations versionadas.
+- Argon2id para senha e JWT HS256 próprio para sessão.
+- TypeScript, Bootstrap, Bootstrap Icons e SweetAlert2 no frontend.
+- Docker Compose para banco local de desenvolvimento.
+- GitHub Actions, `cargo audit`, `cargo-deny`, `npm audit` e Trivy para CI e
+  auditoria pública.
+
+## Arquitetura
+
+O código segue separação por camadas:
+
+```text
+src/domain/          regras de negócio, tipos validados e cálculos
+src/application/     casos de uso, orquestração e erros de aplicação
+src/infrastructure/  PostgreSQL, configuração, segurança, telemetria e repos
+src/presentation/    rotas HTTP, cookies, templates e boundary web/API
+migrations/          schema PostgreSQL versionado pelo SQLx
+frontend/            TypeScript do cliente progressivo
+templates/           páginas Askama
+specs/               requisitos, ameaças, rotas e planos por fase
 ```
 
-Assets web locais:
+Valores monetários e quantidades usam tipos decimais; o projeto não usa ponto
+flutuante para cálculos financeiros.
 
-```bash
-npm install
-npm run build
-```
+## Como executar localmente
 
-O PostgreSQL de desenvolvimento é publicado em `127.0.0.1:5433` para evitar
-conflito com instalações locais que já usam a porta padrão `5432`.
+Pré-requisitos:
 
-O ambiente local usa duas credenciais: `DATABASE_MIGRATION_URL` para migrations
-e `DATABASE_URL` para runtime. A aplicação não deve rodar com usuário capaz de
-alterar schema.
+- Linux ou ambiente compatível.
+- Rust 1.95.0.
+- Node.js/npm.
+- Docker com Compose.
+- `sqlx-cli` 0.9.0.
 
-Se o `sqlx-cli` não estiver instalado:
+Instale o `sqlx-cli` se necessário:
 
 ```bash
 cargo install sqlx-cli --version 0.9.0 --no-default-features --features postgres,rustls
 ```
 
-Rotas iniciais:
-
-- `GET /` — redireciona para `/dashboard`.
-- `GET /login` e `GET /register` — páginas Askama de autenticação.
-- `POST /login`, `POST /register` e `POST /logout` — fallback server-rendered
-  para funcionar sem JavaScript.
-- `GET /dashboard` — dashboard autenticado com avatar de iniciais, totais por
-  moeda e gráficos progressivos via TypeScript.
-- `GET /health/live` — liveness sem dependência do banco.
-- `GET /health/ready` — readiness com consulta mínima ao PostgreSQL.
-- `POST /auth/register` — cadastra usuário com senha hasheada via Argon2id.
-- `POST /auth/login` — autentica e grava JWT em cookie `HttpOnly`.
-- `GET /auth/me` — retorna usuário autenticado via cookie.
-- `POST /auth/logout` — exige `x-csrf-token`, revoga a sessão persistida e
-  limpa os cookies.
-- `GET/POST /api/brokers` — lista e cadastra corretoras.
-- `PATCH /api/brokers/{broker_id}` — atualiza corretora com controle de versão.
-- `POST /api/brokers/{broker_id}/archive` — arquiva corretora sem posição
-  aberta.
-- `GET/POST /api/assets` — lista e cadastra ativos.
-- `PATCH /api/assets/{asset_id}` — atualiza ativo com allowlist e versão.
-- `GET /api/instruments/search?q=PETR4` — sugere metadados de ativo pelo
-  backend com cache; no MVP usa fonte local determinística e exige confirmação
-  do usuário antes de cadastrar.
-- `GET /api/transactions` — lista extrato.
-- `POST /api/transactions/buy` — registra compra.
-- `POST /api/transactions/sell` — registra venda, bloqueando posição negativa.
-- `GET /api/portfolio/summary` — retorna posições, totais por moeda, alocações
-  e fluxo diário.
-
-Exemplo de login local:
+Configure o ambiente:
 
 ```bash
-curl -c /tmp/carteira-cookie.txt \
-  -H 'content-type: application/json' \
-  -d '{"username":"maicom_dev","password":"SenhaLocalForte123"}' \
-  http://127.0.0.1:3000/auth/login
+cp .env.example .env
 ```
 
-O login também retorna `csrf_token` e grava o cookie `investment_csrf`. Toda
-mutação autenticada deve enviar esse valor no header `x-csrf-token`. O app ainda
-aplica rate limit em memória por IP real da conexão e username normalizado; no
-VPS, Nginx/Fail2ban continuam fora deste repositório público.
+Para desenvolvimento local, gere novos valores para `AUTH_JWT_SECRET` e
+`AUTH_SESSION_HASH_KEY` no `.env`:
 
-## Qualidade
+```bash
+head /dev/urandom | tr -dc A-Za-z0-9 | head -c 64
+```
+
+Suba o banco e aplique migrations:
+
+```bash
+docker compose -f docker-compose.dev.yml up -d --wait
+npm run db:migrate
+```
+
+Compile os assets e rode a aplicação:
+
+```bash
+npm install
+npm run build
+cargo run
+```
+
+Acesse `http://127.0.0.1:3000`.
+
+O PostgreSQL de desenvolvimento usa `127.0.0.1:5433` para evitar conflito com
+instalações locais na porta `5432`. A aplicação usa duas URLs: uma credencial de
+migration (`DATABASE_MIGRATION_URL`) e uma de runtime (`DATABASE_URL`) com
+privilégios menores.
+
+## Rotas principais
+
+- `GET /` — redireciona visitante para `/login` e usuário autenticado para
+  `/dashboard`.
+- `GET /login` e `GET /register` — páginas de autenticação.
+- `POST /login`, `POST /register` e `POST /logout` — fallback HTML sem
+  JavaScript.
+- `GET /dashboard` — resumo autenticado da carteira.
+- `GET /brokers`, `GET /assets`, `GET /transactions` — telas principais da
+  carteira.
+- `GET /health/live` — liveness sem banco.
+- `GET /health/ready` — readiness com consulta ao PostgreSQL.
+- `/auth/*` — API JSON de autenticação.
+- `/api/brokers`, `/api/assets`, `/api/transactions`,
+  `/api/portfolio/summary` — API JSON da carteira.
+
+O contrato detalhado está em `specs/CONTRATO_HTTP.md` e o mapa funcional de
+telas está em `specs/ROTAS_E_TELAS.md`.
+
+## Como testar
+
+Checks principais:
 
 ```bash
 cargo fmt --all -- --check
 cargo clippy --all-targets --all-features -- -D warnings
 cargo test --all-features
 npm run check
+npm run test:ts
 npm run build
+npm run audit:public-boundary
 ```
 
-Configurações reais de VPS, Nginx, Fail2ban, firewall, deploy remoto, backups e
-segredos não pertencem a este repositório público.
+Auditorias adicionais:
 
-A aplicação carrega somente o arquivo `./.env` do diretório atual. Ela não deve
-herdar `.env` de diretórios pais para evitar contaminação entre projetos locais.
+```bash
+npm run audit:supply-chain
+npm run audit:container
+npm run audit:container-baseline
+```
+
+`cargo test --all-features` exige PostgreSQL local com migrations aplicadas. O
+CI executa formatação, lint, testes Rust, testes TypeScript, auditoria pública
+de fronteira e checks de supply chain.
+
+## Melhoria autoral implementada
+
+Além do fluxo básico proposto no desafio, esta versão adiciona:
+
+- corretoras como entidade inicial da carteira;
+- isolamento por usuário em consultas e mutações;
+- controle de versão otimista para reduzir sobrescrita acidental;
+- cálculo decimal seguro de posições, preço médio e totais por moeda;
+- dashboard com gráficos que não misturam BRL e USD;
+- extrato com compras, vendas e fluxo líquido diário;
+- autenticação com cookie, CSRF, rate limit e eventos de segurança;
+- separação entre usuário de migration e usuário runtime do banco;
+- container runtime non-root e baseline público inspirado no OWASP Docker Top
+  10.
+
+## Segurança e limites de produção
+
+Segurança é requisito primário do projeto. O backend não confia em entrada do
+usuário, usa DTOs com campos conhecidos, queries parametrizadas via SQLx,
+cookies `HttpOnly`, cabeçalhos de segurança, limite de corpo, timeout, limite de
+concorrência e rate limits em memória.
+
+Limitações honestas do MVP:
+
+- rate limit em memória protege uma instância, mas mitigação forte de DDoS exige
+  camada de borda privada;
+- preços não vêm de uma integração financeira oficial em tempo real;
+- não há recuperação de senha, upload de avatar ou painel administrativo;
+- métricas, alertas, Nginx, Fail2ban, firewall, backup e deploy real ficam fora
+  deste repositório público.
+
+O contrato público para Linux/produção está em `specs/07-producao-linux.md`.
+Detalhes reais de VPS, domínio, usuários, paths, chaves, regras de proxy e
+runbooks operacionais não devem ser versionados aqui.
+
+## O que aprendi no desafio
+
+- Como estruturar uma aplicação fullstack Rust com Axum, Askama e SQLx.
+- Como modelar regras financeiras sem `float`.
+- Como separar domínio, aplicação, infraestrutura e apresentação sem exagerar a
+  fragmentação de arquivos.
+- Como usar migrations e credenciais distintas para evolução segura do banco.
+- Como aplicar segurança em camadas: frontend para experiência, backend como
+  autoridade, banco com invariantes e CI com auditorias.
+- Como preparar um projeto pequeno para futura hospedagem Linux sem expor
+  detalhes sensíveis de infraestrutura em um repositório público.
+
+## Licença
+
+Este projeto está licenciado sob MIT. Veja `LICENSE`.
