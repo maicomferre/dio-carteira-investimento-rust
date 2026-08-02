@@ -15,7 +15,7 @@ No dashboard aparecem:
 - barra superior com marca, círculo com iniciais do usuário e logout;
 - cartões com valor atual total, separados por moeda;
 - tabela/lista dos ativos do próprio usuário;
-- símbolo, mercado, nome, categoria, quantidade, preço médio, preço atual e
+- símbolo, mercado, nome, categoria, quantidade, preço médio e
   valor atual;
 - seletor de moeda BRL/USD;
 - gráfico de rosca com distribuição por categoria;
@@ -63,7 +63,7 @@ nome, versão, link do repositório e aviso de que não há recomendação finan
 Erros 403/404/429/500 possuem páginas próprias e não expõem detalhes internos.
 
 No cadastro de ativo, o usuário digita o símbolo e recebe sugestões do backend.
-Ao escolher uma, nome, mercado, categoria, moeda e preço atual indicativo são
+Ao escolher uma, nome, mercado, categoria e moeda são
 preenchidos com fonte e horário. Tudo pode ser revisado; indisponibilidade do
 provider revela o formulário manual, sem bloquear o fluxo.
 

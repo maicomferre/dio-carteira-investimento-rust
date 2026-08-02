@@ -14,7 +14,7 @@ copiar código sem licença declarada.
 - Cadastro, login e logout com sessão em cookie `HttpOnly`.
 - Controle CSRF em mutações autenticadas.
 - Cadastro de corretoras usadas pelo investidor.
-- Cadastro de ativos com símbolo, mercado, categoria, moeda e preço atual.
+- Cadastro de ativos com símbolo, mercado, categoria e moeda.
 - Sugestão de metadados de instrumentos pelo backend.
 - Registro de compras e vendas com bloqueio de posição negativa.
 - Dashboard com avatar por iniciais, totais por moeda, distribuição por
@@ -23,7 +23,7 @@ copiar código sem licença declarada.
 - Health checks para execução em Linux atrás de um gateway HTTP.
 
 O objetivo não é fazer recomendação financeira nem integração com corretoras
-reais. O preço atual é manual/indicativo no MVP.
+reais. O preço executado é informado em cada compra ou venda.
 
 ## Tecnologias usadas
 

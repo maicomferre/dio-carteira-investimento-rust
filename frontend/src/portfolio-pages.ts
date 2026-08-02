@@ -240,11 +240,11 @@ async function submitAsset(form: HTMLFormElement, page: HTMLElement): Promise<vo
     market: inputValue(form, "market"),
     category: inputValue(form, "category"),
     currency: inputValue(form, "currency"),
-    current_price: parseDecimal(inputValue(form, "current_price")),
+    current_price: parseDecimal(inputValue(form, "current_price") || "0"),
   };
 
   if (payload.symbol.length < 2 || payload.name.length < 2 || payload.current_price === null) {
-    return showValidationError(form, ["symbol", "name", "current_price"], "Revise símbolo, nome e preço atual.");
+    return showValidationError(form, ["symbol", "name"], "Revise símbolo e nome do ativo.");
   }
 
   try {
@@ -283,7 +283,7 @@ async function loadAssets(page: HTMLElement): Promise<Asset[]> {
 function renderAssets(target: HTMLElement | null, assets: Asset[], page: HTMLElement): void {
   if (target === null) return;
   if (assets.length === 0) {
-    target.replaceChildren(rowWithMessage("Nenhum ativo cadastrado.", 6));
+    target.replaceChildren(rowWithMessage("Nenhum ativo cadastrado.", 5));
     return;
   }
 
@@ -295,8 +295,11 @@ function renderAssets(target: HTMLElement | null, assets: Asset[], page: HTMLEle
         tableCell(asset.name),
         tableCell(asset.market),
         tableCell(asset.currency),
-        tableCell(money(asset.current_price, asset.currency), "text-end"),
-        actionCell([button("Editar", "btn-outline-primary", () => fillAssetForm(page, asset))]),
+        actionCell([
+          linkButton("Comprar", "btn-primary", transactionHref(asset.id, "buy")),
+          linkButton("Vender", "btn-outline-primary", transactionHref(asset.id, "sell")),
+          button("Editar", "btn-outline-secondary", () => fillAssetForm(page, asset)),
+        ]),
       );
       return row;
     }),
@@ -412,6 +415,7 @@ function bootTransactionsPage(): void {
 
 async function refreshTransactionsPage(page: HTMLElement): Promise<void> {
   const [assets, brokers, summary] = await Promise.all([loadAssetOptions(page), loadBrokerOptions(page), client.get<PortfolioSummary>(routes.portfolioSummary)]);
+  applyTransactionPrefill(page);
   await loadTransactions(page, assets, brokers, summary.positions);
   updateAvailablePosition(page);
 }
@@ -543,18 +547,20 @@ function renderTransactions(target: HTMLElement | null, transactions: Transactio
   }
 
   const assetNames = new Map(assets.map((asset) => [asset.id, asset.symbol]));
+  const assetCurrencies = new Map(assets.map((asset) => [asset.id, asset.currency]));
   const brokerNames = new Map(brokers.map((broker) => [broker.id, broker.name]));
   target.replaceChildren(
     ...transactions.map((transaction) => {
       const row = document.createElement("tr");
+      const currency = assetCurrencies.get(transaction.asset_id) ?? "BRL";
       row.append(
         tableCell(formatDate(transaction.occurred_at)),
         tableCell(transaction.transaction_type === "BUY" ? "Compra" : "Venda"),
         tableCell(assetNames.get(transaction.asset_id) ?? shortId(transaction.asset_id)),
         tableCell(brokerNames.get(transaction.broker_id) ?? shortId(transaction.broker_id)),
-        tableCell(transaction.quantity, "text-end"),
-        tableCell(transaction.unit_price, "text-end"),
-        tableCell(transaction.fees, "text-end"),
+        tableCell(formatDecimal(transaction.quantity), "text-end"),
+        tableCell(money(transaction.unit_price, currency), "text-end"),
+        tableCell(money(transaction.fees, currency), "text-end"),
       );
       return row;
     }),
@@ -607,13 +613,21 @@ function tableCell(value: string, className?: string): HTMLTableCellElement {
   return cell;
 }
 
-function actionCell(actions: HTMLButtonElement[]): HTMLTableCellElement {
+function actionCell(actions: HTMLElement[]): HTMLTableCellElement {
   const cell = tableCell("", "text-end");
   const group = document.createElement("div");
   group.className = "btn-group btn-group-sm";
   group.append(...actions);
   cell.append(group);
   return cell;
+}
+
+function linkButton(label: string, variant: string, href: string): HTMLAnchorElement {
+  const element = document.createElement("a");
+  element.className = `btn ${variant}`;
+  element.href = href;
+  element.textContent = label;
+  return element;
 }
 
 function button(label: string, variant: string, onClick: () => void, disabled = false): HTMLButtonElement {
@@ -645,6 +659,10 @@ function money(value: string, currency: string): string {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency }).format(Number(value));
 }
 
+function formatDecimal(value: string): string {
+  return new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 8 }).format(Number(value));
+}
+
 function formatDate(value: string): string {
   const parsed = new Date(value);
   return Number.isNaN(parsed.getTime()) ? value : parsed.toLocaleDateString("pt-BR");
@@ -657,6 +675,22 @@ function formatTimestamp(value: number): string {
 
 function shortId(value: string): string {
   return value.slice(0, 8);
+}
+
+function transactionHref(assetId: string, type: "buy" | "sell"): string {
+  const params = new URLSearchParams({ asset_id: assetId, type });
+  return `/transactions?${params.toString()}`;
+}
+
+function applyTransactionPrefill(page: HTMLElement): void {
+  const params = new URLSearchParams(window.location.search);
+  const assetId = params.get("asset_id");
+  const type = params.get("type");
+  const form = page.querySelector<HTMLFormElement>("[data-transaction-form]");
+  if (form === null) return;
+
+  if (type === "buy" || type === "sell") setInputValue(form, "transaction_type", type);
+  if (assetId !== null) setInputValue(form, "asset_id", assetId);
 }
 
 function showValidationError(form: HTMLFormElement, fieldNames: string[], message: string): void {

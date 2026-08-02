@@ -272,7 +272,7 @@ pub struct PortfolioSummary {
     pub totals_by_currency: BTreeMap<Currency, Decimal>,
     pub allocation_by_category: BTreeMap<(Currency, AssetCategory), Decimal>,
     pub allocation_by_broker: BTreeMap<(Currency, Uuid), Decimal>,
-    pub daily_cash_flow: BTreeMap<Date, DailyCashFlow>,
+    pub daily_cash_flow: BTreeMap<(Currency, Date), DailyCashFlow>,
 }
 
 pub fn calculate_summary(
@@ -282,7 +282,7 @@ pub fn calculate_summary(
     ordered_transactions.sort_by_key(|transaction| (transaction.occurred_at, transaction.id));
 
     let mut positions = BTreeMap::<(Uuid, Uuid), Position>::new();
-    let mut daily_cash_flow = BTreeMap::<Date, DailyCashFlow>::new();
+    let mut daily_cash_flow = BTreeMap::<(Currency, Date), DailyCashFlow>::new();
 
     for transaction in ordered_transactions {
         let quantity = transaction.quantity.value();
@@ -290,12 +290,14 @@ pub fn calculate_summary(
         let fees = transaction.fees.value();
         let gross_amount = quantity * unit_price;
         let day = transaction.occurred_at.date();
-        let daily = daily_cash_flow.entry(day).or_insert(DailyCashFlow {
-            purchases: Decimal::ZERO,
-            sales: Decimal::ZERO,
-            fees: Decimal::ZERO,
-            net_flow: Decimal::ZERO,
-        });
+        let daily = daily_cash_flow
+            .entry((transaction.currency, day))
+            .or_insert(DailyCashFlow {
+                purchases: Decimal::ZERO,
+                sales: Decimal::ZERO,
+                fees: Decimal::ZERO,
+                net_flow: Decimal::ZERO,
+            });
 
         let position = positions
             .entry((transaction.asset_id, transaction.broker_id))
@@ -582,12 +584,59 @@ mod tests {
         let summary = calculate_summary(&transactions).unwrap();
         let cash_flow = summary
             .daily_cash_flow
-            .get(&datetime!(2026-07-01 00:00 UTC).date())
+            .get(&(Currency::Brl, datetime!(2026-07-01 00:00 UTC).date()))
             .unwrap();
 
         assert_eq!(cash_flow.purchases, dec!(200));
         assert_eq!(cash_flow.sales, dec!(120));
         assert_eq!(cash_flow.fees, dec!(3));
         assert_eq!(cash_flow.net_flow, dec!(-83));
+    }
+
+    #[test]
+    fn keeps_daily_cash_flow_separated_by_currency() {
+        let brl_asset_id = Uuid::from_u128(10);
+        let usd_asset_id = Uuid::from_u128(11);
+        let broker_id = Uuid::new_v4();
+        let mut transactions = vec![transaction(TransactionInput {
+            id: Uuid::from_u128(1),
+            asset_id: brl_asset_id,
+            broker_id,
+            transaction_type: TransactionType::Buy,
+            quantity: dec!(10),
+            unit_price: dec!(10),
+            fees: Decimal::ZERO,
+            occurred_at: datetime!(2026-07-01 10:00 UTC),
+        })];
+        let mut usd = transaction(TransactionInput {
+            id: Uuid::from_u128(2),
+            asset_id: usd_asset_id,
+            broker_id,
+            transaction_type: TransactionType::Buy,
+            quantity: dec!(5),
+            unit_price: dec!(8),
+            fees: Decimal::ZERO,
+            occurred_at: datetime!(2026-07-01 11:00 UTC),
+        });
+        usd.currency = Currency::Usd;
+        transactions.push(usd);
+
+        let summary = calculate_summary(&transactions).unwrap();
+        let day = datetime!(2026-07-01 00:00 UTC).date();
+
+        assert_eq!(
+            summary
+                .daily_cash_flow
+                .get(&(Currency::Brl, day))
+                .map(|flow| flow.net_flow),
+            Some(dec!(-100))
+        );
+        assert_eq!(
+            summary
+                .daily_cash_flow
+                .get(&(Currency::Usd, day))
+                .map(|flow| flow.net_flow),
+            Some(dec!(-40))
+        );
     }
 }

@@ -32,7 +32,7 @@
         <div>
           <p class="text-uppercase text-primary small mb-1">Ativos</p>
           <h1 class="h3 mb-0">Cadastro de instrumentos</h1>
-          <p class="text-muted mb-0">Use busca por símbolo quando disponível ou preencha manualmente.</p>
+          <p class="text-muted mb-0">Cadastre metadados do ativo. Preço real, quantidade e taxas entram apenas em Movimentações.</p>
         </div>
       </div>
 
@@ -43,6 +43,7 @@
               <h2 class="h5">Novo ativo</h2>
               <form method="post" action="/api/assets" data-asset-form>
                 <div class="alert alert-danger" role="alert" tabindex="-1" data-form-status hidden></div>
+                <input id="asset-price" name="current_price" type="hidden" value="0">
                 <div class="mb-3">
                   <label class="form-label" for="asset-symbol">Símbolo</label>
                   <input class="form-control text-uppercase" id="asset-symbol" name="symbol" minlength="2" maxlength="32" required placeholder="PETR4" aria-describedby="asset-symbol-help asset-symbol-error">
@@ -81,18 +82,13 @@
                   </div>
                 </div>
                 <div class="row g-2">
-                  <div class="col-md-6 mb-3">
+                  <div class="col-12 mb-3">
                     <label class="form-label" for="asset-currency">Moeda</label>
                     <select class="form-select" id="asset-currency" name="currency" required aria-describedby="asset-currency-error">
                       <option value="BRL">BRL</option>
                       <option value="USD">USD</option>
                     </select>
                     <div class="invalid-feedback" id="asset-currency-error" data-error-for="asset-currency" hidden></div>
-                  </div>
-                  <div class="col-md-6 mb-3">
-                    <label class="form-label" for="asset-price">Preço atual</label>
-                    <input class="form-control" id="asset-price" name="current_price" inputmode="decimal" pattern="[0-9]+([,.][0-9]{1,8})?" required placeholder="38.42" aria-describedby="asset-price-error">
-                    <div class="invalid-feedback" id="asset-price-error" data-error-for="asset-price" hidden></div>
                   </div>
                 </div>
                 <div class="d-grid gap-2">
@@ -115,12 +111,11 @@
                       <th>Nome</th>
                       <th>Mercado</th>
                       <th>Moeda</th>
-                      <th class="text-end">Preço</th>
                       <th class="text-end">Ações</th>
                     </tr>
                   </thead>
                   <tbody data-asset-list>
-                    <tr><td colspan="6">Carregando...</td></tr>
+                    <tr><td colspan="5">Carregando...</td></tr>
                   </tbody>
                 </table>
               </div>

@@ -37,6 +37,7 @@ interface BrokerAllocation {
 }
 
 interface DailyCashFlow {
+  currency: string;
   date: string;
   purchases: string;
   sales: string;
@@ -122,7 +123,7 @@ function renderCurrency(
   renderDonut(root, "[data-category-chart]", summary.allocation_by_category.filter((item) => item.currency === currency));
   renderBars(root, summary.positions.filter((item) => item.currency === currency), currency, labels);
   renderBrokerDonut(root, summary.allocation_by_broker.filter((item) => item.currency === currency), labels.brokers);
-  renderCashFlow(root, summary.daily_cash_flow);
+  renderCashFlow(root, summary.daily_cash_flow.filter((item) => item.currency === currency), currency);
 }
 
 function renderDonut(root: HTMLElement, selector: string, items: Array<{ category: string; total: string }>): void {
@@ -191,7 +192,7 @@ function renderBars(
   );
 }
 
-function renderCashFlow(root: HTMLElement, flows: DailyCashFlow[]): void {
+function renderCashFlow(root: HTMLElement, flows: DailyCashFlow[], currency: string): void {
   const target = root.querySelector<HTMLElement>("[data-cash-flow]");
   if (target === null) return;
   if (flows.length === 0) {
@@ -204,7 +205,7 @@ function renderCashFlow(root: HTMLElement, flows: DailyCashFlow[]): void {
     ...latest.map((item) => {
       const row = document.createElement("li");
       row.className = "list-group-item d-flex justify-content-between";
-      row.append(textSpan(item.date), textSpan(`líquido ${item.net_flow}`));
+      row.append(textSpan(formatDate(item.date)), textSpan(`Líquido ${money(item.net_flow, currency)}`));
       return row;
     }),
   );
@@ -229,7 +230,7 @@ function renderAssetsWithoutPosition(root: HTMLElement, assets: Asset[], positio
     ...pendingAssets.map((asset) => {
       const item = document.createElement("li");
       item.className = "list-group-item d-flex justify-content-between align-items-center";
-      item.append(textSpan(`${asset.symbol} — ${asset.name}`), badge(`${asset.currency} · sem compra`));
+      item.append(textSpan(`${asset.symbol} — ${asset.name}`), badge(`${asset.currency} · sem posição`));
       return item;
     }),
   );
@@ -291,6 +292,12 @@ function donutLabel(items: Array<{ label: string; value: number }>): string {
 
 function money(value: string, currency: string): string {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency }).format(Number(value));
+}
+
+function formatDate(value: string): string {
+  const [year, month, day] = value.split("-").map(Number);
+  if (year === undefined || month === undefined || day === undefined) return value;
+  return new Date(year, month - 1, day).toLocaleDateString("pt-BR");
 }
 
 function setText(root: HTMLElement, selector: string, value: string): void {

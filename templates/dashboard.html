@@ -14,10 +14,10 @@
       <nav class="container py-3 d-flex align-items-center justify-content-between">
         <a class="navbar-brand fw-semibold" href="/dashboard">Carteira de Investimentos</a>
         <div class="d-flex align-items-center gap-3">
-          <a class="btn btn-outline-primary btn-sm" href="/dashboard"><i class="bi bi-speedometer2"></i> Dashboard</a>
+          <a class="btn btn-primary btn-sm" href="/dashboard"><i class="bi bi-speedometer2"></i> Dashboard</a>
           <a class="btn btn-outline-primary btn-sm" href="/brokers"><i class="bi bi-bank"></i> Corretoras</a>
           <a class="btn btn-outline-primary btn-sm" href="/assets"><i class="bi bi-graph-up-arrow"></i> Ativos</a>
-          <a class="btn btn-primary btn-sm" href="/transactions"><i class="bi bi-plus-circle"></i> Movimentações</a>
+          <a class="btn btn-outline-primary btn-sm" href="/transactions"><i class="bi bi-plus-circle"></i> Movimentações</a>
           <span class="user-avatar" aria-label="Usuário {{ user.username }}">{{ user.initials }}</span>
           <form method="post" action="/logout" data-logout-form>
             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
@@ -96,7 +96,7 @@
                   <h2 class="h5">Ativos cadastrados sem posição</h2>
                   <p class="text-muted small mb-0">O ativo só entra nos totais, gráficos e extrato depois que uma compra é registrada.</p>
                 </div>
-                <a class="btn btn-outline-primary btn-sm" href="/transactions">Registrar compra</a>
+                <a class="btn btn-outline-primary btn-sm" href="/transactions">Registrar movimentação</a>
               </div>
               <ul class="list-group list-group-flush mt-3" data-assets-without-position></ul>
             </div>

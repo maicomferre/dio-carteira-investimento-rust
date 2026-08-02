@@ -282,6 +282,7 @@ struct BrokerAllocationResponse {
 
 #[derive(Debug, Serialize)]
 struct DailyCashFlowResponse {
+    currency: String,
     date: String,
     #[serde(with = "rust_decimal::serde::str")]
     purchases: Decimal,
@@ -1172,7 +1173,7 @@ fn summary_response(summary: PortfolioSummary) -> PortfolioSummaryResponse {
             .into_iter()
             .map(
                 |(
-                    date,
+                    (currency, date),
                     DailyCashFlow {
                         purchases,
                         sales,
@@ -1180,6 +1181,7 @@ fn summary_response(summary: PortfolioSummary) -> PortfolioSummaryResponse {
                         net_flow,
                     },
                 )| DailyCashFlowResponse {
+                    currency: currency.as_str().to_owned(),
                     date: date.to_string(),
                     purchases,
                     sales,
