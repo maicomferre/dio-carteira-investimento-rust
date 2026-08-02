@@ -1328,6 +1328,7 @@ mod tests {
     fn http_config() -> HttpConfig {
         HttpConfig {
             bind_addr: SocketAddr::from(([127, 0, 0, 1], 3000)),
+            trusted_proxy_ips: Vec::new(),
             request_timeout: Duration::from_secs(5),
             max_body_bytes: 16_384,
             max_concurrent_requests: 16,

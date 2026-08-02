@@ -1,4 +1,9 @@
-use std::{env, net::SocketAddr, str::FromStr, time::Duration};
+use std::{
+    env,
+    net::{IpAddr, SocketAddr},
+    str::FromStr,
+    time::Duration,
+};
 
 use anyhow::{Context, bail};
 
@@ -29,6 +34,7 @@ pub enum LogFormat {
 #[derive(Debug, Clone)]
 pub struct HttpConfig {
     pub bind_addr: SocketAddr,
+    pub trusted_proxy_ips: Vec<IpAddr>,
     pub request_timeout: Duration,
     pub max_body_bytes: usize,
     pub max_concurrent_requests: usize,
@@ -84,6 +90,10 @@ impl AppConfig {
             .unwrap_or_else(|| "127.0.0.1:3000".to_owned())
             .parse()
             .context("APP_BIND_ADDR inválido")?;
+        let trusted_proxy_ips = read_ip_csv_env("APP_TRUSTED_PROXY_IPS")?.unwrap_or_default();
+        if environment != "development" && trusted_proxy_ips.is_empty() {
+            bail!("APP_TRUSTED_PROXY_IPS é obrigatório fora do ambiente development");
+        }
         let request_timeout_seconds = read_env_parse("APP_REQUEST_TIMEOUT_SECONDS", 10)?;
         if !(1..=60).contains(&request_timeout_seconds) {
             bail!("APP_REQUEST_TIMEOUT_SECONDS deve ficar entre 1 e 60");
@@ -227,6 +237,7 @@ impl AppConfig {
             },
             http: HttpConfig {
                 bind_addr,
+                trusted_proxy_ips,
                 request_timeout: Duration::from_secs(request_timeout_seconds),
                 max_body_bytes,
                 max_concurrent_requests,
@@ -290,6 +301,27 @@ fn read_csv_env(key: &str) -> Option<Vec<String>> {
             .map(str::to_owned)
             .collect()
     })
+}
+
+fn read_ip_csv_env(key: &str) -> anyhow::Result<Option<Vec<IpAddr>>> {
+    let Some(values) = read_csv_env(key) else {
+        return Ok(None);
+    };
+
+    let mut addresses = Vec::with_capacity(values.len());
+    for value in values {
+        let address = value
+            .parse::<IpAddr>()
+            .with_context(|| format!("{key} contém IP inválido: {value}"))?;
+        if address.is_unspecified() || address.is_multicast() {
+            bail!("{key} contém IP não permitido: {value}");
+        }
+        if !addresses.contains(&address) {
+            addresses.push(address);
+        }
+    }
+
+    Ok(Some(addresses))
 }
 
 fn default_allowed_origins(environment: &str) -> Vec<String> {
