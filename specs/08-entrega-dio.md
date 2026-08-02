@@ -27,7 +27,7 @@ avaliar, demonstrando o aprendizado em vez de apenas apresentar código.
   preço manual e mitigação parcial de DDoS.
 - [ ] Adicionar screenshots sem dados/segredos reais e exemplo de API sanitizado.
 - [ ] Publicar comandos de teste, cobertura e auditoria com resultados esperados.
-- [ ] Escolher licença do projeto e conferir licenças das dependências.
+- [x] Escolher licença do projeto e conferir licenças das dependências.
 - [ ] Fazer instalação do zero seguindo apenas o README.
 - [ ] Revisar commits/PRs e garantir que nenhuma credencial ou artefato local
   entrou no histórico.
