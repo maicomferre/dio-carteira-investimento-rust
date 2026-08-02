@@ -2,7 +2,7 @@ use carteira_de_investimentos_maicaosa::{
     infrastructure::{
         auth_repository::AuthRepository,
         config::AppConfig,
-        database::create_pool,
+        database::{create_pool, run_migrations},
         telemetry::{init_tracing, shutdown_signal},
     },
     presentation::http::build_router,
@@ -15,6 +15,12 @@ async fn main() -> anyhow::Result<()> {
 
     let config = AppConfig::from_env()?;
     init_tracing(&config)?;
+
+    if std::env::args().nth(1).as_deref() == Some("migrate") {
+        run_migrations(&config.database).await?;
+        tracing::info!("migrations aplicadas com sucesso");
+        return Ok(());
+    }
 
     let pool = create_pool(&config.database).await?;
     let auth_repository = AuthRepository::new(pool.clone());
