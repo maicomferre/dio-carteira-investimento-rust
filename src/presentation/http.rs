@@ -1,9 +1,9 @@
-use std::{net::SocketAddr, sync::Arc, time::Duration};
+use std::{sync::Arc, time::Duration};
 
 use askama::Template;
 use axum::{
-    Form, Json, Router,
-    extract::{ConnectInfo, Path, Query, Request, State},
+    Extension, Form, Json, Router,
+    extract::{Path, Query, Request, State},
     http::{HeaderMap, HeaderName, HeaderValue, StatusCode, header},
     middleware::Next,
     response::{Html, IntoResponse, Redirect, Response},
@@ -46,6 +46,7 @@ use crate::{
         security::{IpRateLimiter, LoginRateLimiter},
         security_events,
     },
+    presentation::client_ip::{ClientIp, TrustedProxies, resolve_client_ip},
 };
 
 const REQUEST_ID_HEADER: &str = "x-request-id";
@@ -301,6 +302,7 @@ pub fn build_router(
     instrument_provider_config: InstrumentProviderConfig,
 ) -> Router {
     let request_id_header = HeaderName::from_static(REQUEST_ID_HEADER);
+    let trusted_proxies = TrustedProxies::new(http.trusted_proxy_ips.iter().copied());
     let global_rate_limiter = IpRateLimiter::new(
         auth.global_rate_limit_max_requests,
         Duration::from_secs(auth.global_rate_limit_window_seconds),
@@ -382,6 +384,10 @@ pub fn build_router(
         .layer(axum::middleware::from_fn(security_headers))
         .layer(RequestBodyLimitLayer::new(http.max_body_bytes))
         .layer(TraceLayer::new_for_http())
+        .layer(axum::middleware::from_fn_with_state(
+            trusted_proxies,
+            resolve_client_ip,
+        ))
 }
 
 async fn root() -> Redirect {
@@ -390,7 +396,7 @@ async fn root() -> Redirect {
 
 async fn global_rate_limit(
     State(state): State<AppState>,
-    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+    Extension(ClientIp(client_ip)): Extension<ClientIp>,
     request: Request,
     next: Next,
 ) -> Result<Response, AppError> {
@@ -398,10 +404,10 @@ async fn global_rate_limit(
     if !is_global_rate_limit_exempt(path)
         && let Err(error) = state
             .global_rate_limiter
-            .check_and_record(addr.ip(), GLOBAL_RATE_LIMIT_SCOPE)
+            .check_and_record(client_ip, GLOBAL_RATE_LIMIT_SCOPE)
             .await
     {
-        security_events::log_http_rate_limited(addr.ip(), GLOBAL_RATE_LIMIT_SCOPE, path);
+        security_events::log_http_rate_limited(client_ip, GLOBAL_RATE_LIMIT_SCOPE, path);
         return Err(error);
     }
 
@@ -410,12 +416,12 @@ async fn global_rate_limit(
 
 async fn concurrency_limit(
     State(state): State<AppState>,
-    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+    Extension(ClientIp(client_ip)): Extension<ClientIp>,
     request: Request,
     next: Next,
 ) -> Result<Response, AppError> {
     let Ok(_permit) = state.concurrency_limiter.clone().try_acquire_owned() else {
-        security_events::log_concurrency_saturated(addr.ip(), request.uri().path());
+        security_events::log_concurrency_saturated(client_ip, request.uri().path());
         return Err(AppError::Unavailable);
     };
 
@@ -507,10 +513,10 @@ where
 
 async fn login_form(
     State(state): State<AppState>,
-    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+    Extension(client_ip): Extension<ClientIp>,
     Form(payload): Form<AuthRequest>,
 ) -> Result<Response, AppError> {
-    let issued = issue_login_session(&state, addr, payload).await?;
+    let issued = issue_login_session(&state, client_ip, payload).await?;
     let mut response = Redirect::to("/dashboard").into_response();
     response
         .headers_mut()
@@ -524,10 +530,10 @@ async fn login_form(
 
 async fn register_form(
     State(state): State<AppState>,
-    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+    Extension(client_ip): Extension<ClientIp>,
     Form(payload): Form<AuthRequest>,
 ) -> Result<Response, AppError> {
-    apply_register_rate_limit(&state, addr).await?;
+    apply_register_rate_limit(&state, client_ip).await?;
 
     let repository = AuthRepository::new(state.pool.clone());
     auth::register_user(
@@ -537,7 +543,7 @@ async fn register_form(
     )
     .await?;
 
-    login_form(State(state), ConnectInfo(addr), Form(payload)).await
+    login_form(State(state), Extension(client_ip), Form(payload)).await
 }
 
 async fn logout_form(
@@ -589,10 +595,10 @@ async fn readiness(State(state): State<AppState>) -> Result<Json<HealthStatus>, 
 
 async fn register(
     State(state): State<AppState>,
-    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+    Extension(client_ip): Extension<ClientIp>,
     Json(payload): Json<AuthRequest>,
 ) -> Result<(StatusCode, Json<AuthUserResponse>), AppError> {
-    apply_register_rate_limit(&state, addr).await?;
+    apply_register_rate_limit(&state, client_ip).await?;
 
     let repository = AuthRepository::new(state.pool.clone());
     let user = auth::register_user(&repository, payload.username, payload.password).await?;
@@ -602,10 +608,10 @@ async fn register(
 
 async fn login(
     State(state): State<AppState>,
-    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+    Extension(client_ip): Extension<ClientIp>,
     Json(payload): Json<AuthRequest>,
 ) -> Result<Response, AppError> {
-    let issued = issue_login_session(&state, addr, payload).await?;
+    let issued = issue_login_session(&state, client_ip, payload).await?;
 
     let mut response = Json(LoginResponse {
         user: issued.user,
@@ -624,16 +630,16 @@ async fn login(
 
 async fn issue_login_session(
     state: &AppState,
-    addr: SocketAddr,
+    ClientIp(client_ip): ClientIp,
     payload: AuthRequest,
 ) -> Result<IssuedSession, AppError> {
     let limiter_username = limiter_username(&payload.username);
     if let Err(error) = state
         .login_rate_limiter
-        .check(addr.ip(), &limiter_username)
+        .check(client_ip, &limiter_username)
         .await
     {
-        security_events::log_login_rate_limited(addr.ip(), &limiter_username);
+        security_events::log_login_rate_limited(client_ip, &limiter_username);
         return Err(error);
     }
 
@@ -650,16 +656,16 @@ async fn issue_login_session(
         Err(AppError::InvalidCredentials) => {
             state
                 .login_rate_limiter
-                .record_failure(addr.ip(), &limiter_username)
+                .record_failure(client_ip, &limiter_username)
                 .await;
-            security_events::log_login_failed(addr.ip(), &limiter_username);
+            security_events::log_login_failed(client_ip, &limiter_username);
             return Err(AppError::InvalidCredentials);
         }
         Err(error) => return Err(error),
     };
     state
         .login_rate_limiter
-        .record_success(addr.ip(), &limiter_username)
+        .record_success(client_ip, &limiter_username)
         .await;
 
     let cookie = build_session_cookie(
@@ -682,23 +688,29 @@ async fn issue_login_session(
     })
 }
 
-async fn apply_register_rate_limit(state: &AppState, addr: SocketAddr) -> Result<(), AppError> {
+async fn apply_register_rate_limit(
+    state: &AppState,
+    ClientIp(client_ip): ClientIp,
+) -> Result<(), AppError> {
     state
         .register_rate_limiter
-        .check_and_record(addr.ip(), REGISTER_RATE_LIMIT_SCOPE)
+        .check_and_record(client_ip, REGISTER_RATE_LIMIT_SCOPE)
         .await
         .inspect_err(|_| {
-            security_events::log_http_rate_limited(addr.ip(), REGISTER_RATE_LIMIT_SCOPE, "");
+            security_events::log_http_rate_limited(client_ip, REGISTER_RATE_LIMIT_SCOPE, "");
         })
 }
 
-async fn apply_mutation_rate_limit(state: &AppState, addr: SocketAddr) -> Result<(), AppError> {
+async fn apply_mutation_rate_limit(
+    state: &AppState,
+    ClientIp(client_ip): ClientIp,
+) -> Result<(), AppError> {
     state
         .mutation_rate_limiter
-        .check_and_record(addr.ip(), MUTATION_RATE_LIMIT_SCOPE)
+        .check_and_record(client_ip, MUTATION_RATE_LIMIT_SCOPE)
         .await
         .inspect_err(|_| {
-            security_events::log_http_rate_limited(addr.ip(), MUTATION_RATE_LIMIT_SCOPE, "");
+            security_events::log_http_rate_limited(client_ip, MUTATION_RATE_LIMIT_SCOPE, "");
         })
 }
 
@@ -747,11 +759,11 @@ async fn list_brokers(
 
 async fn create_broker(
     State(state): State<AppState>,
-    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+    Extension(client_ip): Extension<ClientIp>,
     headers: HeaderMap,
     Json(payload): Json<CreateBrokerRequest>,
 ) -> Result<(StatusCode, Json<PublicBroker>), AppError> {
-    apply_mutation_rate_limit(&state, addr).await?;
+    apply_mutation_rate_limit(&state, client_ip).await?;
     validate_csrf(&headers, &state.auth)?;
     let user = authenticated_user(&state, &headers).await?;
     let repository = PortfolioRepository::new(state.pool);
@@ -762,12 +774,12 @@ async fn create_broker(
 
 async fn update_broker(
     State(state): State<AppState>,
-    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+    Extension(client_ip): Extension<ClientIp>,
     headers: HeaderMap,
     Path(broker_id): Path<Uuid>,
     Json(payload): Json<UpdateBrokerRequest>,
 ) -> Result<Json<PublicBroker>, AppError> {
-    apply_mutation_rate_limit(&state, addr).await?;
+    apply_mutation_rate_limit(&state, client_ip).await?;
     validate_csrf(&headers, &state.auth)?;
     let user = authenticated_user(&state, &headers).await?;
     let repository = PortfolioRepository::new(state.pool);
@@ -787,11 +799,11 @@ async fn update_broker(
 
 async fn archive_broker(
     State(state): State<AppState>,
-    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+    Extension(client_ip): Extension<ClientIp>,
     headers: HeaderMap,
     Path(broker_id): Path<Uuid>,
 ) -> Result<StatusCode, AppError> {
-    apply_mutation_rate_limit(&state, addr).await?;
+    apply_mutation_rate_limit(&state, client_ip).await?;
     validate_csrf(&headers, &state.auth)?;
     let user = authenticated_user(&state, &headers).await?;
     let repository = PortfolioRepository::new(state.pool);
@@ -813,11 +825,11 @@ async fn list_assets(
 
 async fn create_asset(
     State(state): State<AppState>,
-    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+    Extension(client_ip): Extension<ClientIp>,
     headers: HeaderMap,
     Json(payload): Json<CreateAssetRequest>,
 ) -> Result<(StatusCode, Json<PublicAsset>), AppError> {
-    apply_mutation_rate_limit(&state, addr).await?;
+    apply_mutation_rate_limit(&state, client_ip).await?;
     validate_csrf(&headers, &state.auth)?;
     let user = authenticated_user(&state, &headers).await?;
     let repository = PortfolioRepository::new(state.pool);
@@ -840,12 +852,12 @@ async fn create_asset(
 
 async fn update_asset(
     State(state): State<AppState>,
-    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+    Extension(client_ip): Extension<ClientIp>,
     headers: HeaderMap,
     Path(asset_id): Path<Uuid>,
     Json(payload): Json<UpdateAssetRequest>,
 ) -> Result<Json<PublicAsset>, AppError> {
-    apply_mutation_rate_limit(&state, addr).await?;
+    apply_mutation_rate_limit(&state, client_ip).await?;
     validate_csrf(&headers, &state.auth)?;
     let user = authenticated_user(&state, &headers).await?;
     let repository = PortfolioRepository::new(state.pool);
@@ -892,21 +904,21 @@ async fn list_transactions(
 
 async fn record_purchase(
     State(state): State<AppState>,
-    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+    Extension(client_ip): Extension<ClientIp>,
     headers: HeaderMap,
     Json(payload): Json<CreateTransactionRequest>,
 ) -> Result<(StatusCode, Json<PublicTransaction>), AppError> {
-    apply_mutation_rate_limit(&state, addr).await?;
+    apply_mutation_rate_limit(&state, client_ip).await?;
     record_transaction(state, headers, payload, TransactionType::Buy).await
 }
 
 async fn record_sale(
     State(state): State<AppState>,
-    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+    Extension(client_ip): Extension<ClientIp>,
     headers: HeaderMap,
     Json(payload): Json<CreateTransactionRequest>,
 ) -> Result<(StatusCode, Json<PublicTransaction>), AppError> {
-    apply_mutation_rate_limit(&state, addr).await?;
+    apply_mutation_rate_limit(&state, client_ip).await?;
     record_transaction(state, headers, payload, TransactionType::Sell).await
 }
 
@@ -1291,8 +1303,10 @@ impl IntoResponse for AppError {
 mod tests {
     use super::*;
     use axum::body::{Body, to_bytes};
+    use axum::extract::ConnectInfo;
     use serde_json::Value;
     use sqlx::postgres::PgPoolOptions;
+    use std::net::{IpAddr, SocketAddr};
     use tower::ServiceExt;
 
     const TEST_DATABASE_URL: &str =
@@ -1383,6 +1397,18 @@ mod tests {
         request
             .extensions_mut()
             .insert(ConnectInfo(SocketAddr::from(([127, 0, 0, 1], 31_000))));
+        request
+    }
+
+    fn proxied_request(peer: IpAddr, client_ip: &str, uri: &str) -> Request {
+        let mut request = request(axum::http::Method::GET, uri, Body::empty());
+        request
+            .extensions_mut()
+            .insert(ConnectInfo(SocketAddr::new(peer, 31_000)));
+        request.headers_mut().insert(
+            HeaderName::from_static("x-real-ip"),
+            HeaderValue::from_str(client_ip).expect("valid client IP header"),
+        );
         request
     }
 
@@ -1668,6 +1694,41 @@ mod tests {
             .expect("second route response");
 
         assert_public_error(second, StatusCode::TOO_MANY_REQUESTS, "rate_limited").await;
+    }
+
+    #[tokio::test]
+    async fn trusted_proxy_clients_use_independent_rate_limit_buckets() {
+        let proxy_ip = IpAddr::from([192, 0, 2, 10]);
+        let mut http = http_config();
+        http.trusted_proxy_ips = vec![proxy_ip];
+        let mut auth = auth_config();
+        auth.global_rate_limit_max_requests = 1;
+        let router = build_router(lazy_pool(), http, auth, instrument_provider_config());
+
+        let first_client = router
+            .clone()
+            .oneshot(proxied_request(proxy_ip, "198.51.100.10", "/login"))
+            .await
+            .expect("first client response");
+        assert_eq!(first_client.status(), StatusCode::OK);
+
+        let second_client = router
+            .clone()
+            .oneshot(proxied_request(proxy_ip, "198.51.100.11", "/login"))
+            .await
+            .expect("second client response");
+        assert_eq!(second_client.status(), StatusCode::OK);
+
+        let repeated_first_client = router
+            .oneshot(proxied_request(proxy_ip, "198.51.100.10", "/login"))
+            .await
+            .expect("repeated first client response");
+        assert_public_error(
+            repeated_first_client,
+            StatusCode::TOO_MANY_REQUESTS,
+            "rate_limited",
+        )
+        .await;
     }
 
     #[tokio::test]
