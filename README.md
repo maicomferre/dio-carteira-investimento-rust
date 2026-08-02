@@ -156,8 +156,10 @@ screenshots ficam em `docs/ENTREGA_DIO_EVIDENCIAS.md`.
 Screenshots já disponíveis:
 
 - [Login](docs/screenshots/01-login.png)
+- [Dashboard](docs/screenshots/02-dashboard.png)
 - [Corretoras](docs/screenshots/03-corretoras.png)
 - [Ativos](docs/screenshots/04-ativos.png)
+- [Extrato](docs/screenshots/05-extrato.png)
 
 ## Melhoria autoral implementada
 
