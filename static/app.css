@@ -9,6 +9,18 @@
   width: 100%;
 }
 
+.auth-logo {
+  display: block;
+  height: auto;
+  margin: 0 auto 1rem;
+  max-width: 6.5rem;
+}
+
+.brand-logo {
+  height: 2rem;
+  width: auto;
+}
+
 .user-avatar {
   align-items: center;
   background: #0d6efd;

@@ -4,6 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Dashboard | Carteira de Investimentos</title>
+    <link rel="icon" href="/static/favicon.ico" sizes="any">
     <link rel="stylesheet" href="/static/vendor/bootstrap/css/bootstrap.min.css">
     <link rel="stylesheet" href="/static/vendor/bootstrap-icons/font/bootstrap-icons.min.css">
     <link rel="stylesheet" href="/static/vendor/sweetalert2/sweetalert2.min.css">
@@ -12,7 +13,10 @@
   <body>
     <header class="border-bottom bg-white">
       <nav class="container py-3 d-flex align-items-center justify-content-between">
-        <a class="navbar-brand fw-semibold" href="/dashboard">Carteira de Investimentos</a>
+        <a class="navbar-brand fw-semibold d-inline-flex align-items-center gap-2" href="/dashboard">
+          <img class="brand-logo" src="/static/img/logo.png" alt="">
+          <span>Carteira de Investimentos</span>
+        </a>
         <div class="d-flex align-items-center gap-3">
           <a class="btn btn-primary btn-sm" href="/dashboard"><i class="bi bi-speedometer2"></i> Dashboard</a>
           <a class="btn btn-outline-primary btn-sm" href="/brokers"><i class="bi bi-bank"></i> Corretoras</a>
@@ -80,7 +84,7 @@
           <article class="card shadow-sm">
             <div class="card-body">
               <h2 class="h5">Fluxo diário</h2>
-              <p class="text-muted small">Compras, vendas e saldo líquido diário quando houver extrato.</p>
+              <p class="text-muted small">Entradas e saídas de caixa por dia, separadas por moeda.</p>
               <ul class="list-group list-group-flush" data-cash-flow></ul>
             </div>
           </article>

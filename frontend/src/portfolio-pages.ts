@@ -582,8 +582,8 @@ function updateAvailablePosition(page: HTMLElement): void {
 
   const quantity = transactionState.positions.find((position) => position.asset_id === assetId && position.broker_id === brokerId)?.quantity ?? "0";
   target.textContent = type === "sell"
-    ? `Disponível para venda nesta corretora: ${quantity}`
-    : `Posição atual nesta corretora: ${quantity}`;
+    ? `Disponível para venda nesta corretora: ${formatDecimal(quantity)}`
+    : `Posição atual nesta corretora: ${formatDecimal(quantity)}`;
 }
 
 function inputValue(form: HTMLFormElement, name: string): string {
@@ -664,6 +664,13 @@ function formatDecimal(value: string): string {
 }
 
 function formatDate(value: string): string {
+  const match = /^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2}))?/.exec(value);
+  if (match !== null) {
+    const [, year, month, day, hour, minute] = match;
+    const date = `${day}/${month}/${year}`;
+    return hour !== undefined && minute !== undefined ? `${date} ${hour}:${minute}` : date;
+  }
+
   const parsed = new Date(value);
   return Number.isNaN(parsed.getTime()) ? value : parsed.toLocaleDateString("pt-BR");
 }

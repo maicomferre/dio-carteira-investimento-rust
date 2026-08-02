@@ -205,7 +205,7 @@ function renderCashFlow(root: HTMLElement, flows: DailyCashFlow[], currency: str
     ...latest.map((item) => {
       const row = document.createElement("li");
       row.className = "list-group-item d-flex justify-content-between";
-      row.append(textSpan(formatDate(item.date)), textSpan(`Líquido ${money(item.net_flow, currency)}`));
+      row.append(textSpan(formatDate(item.date)), textSpan(cashFlowLabel(item.net_flow, currency)));
       return row;
     }),
   );
@@ -292,6 +292,13 @@ function donutLabel(items: Array<{ label: string; value: number }>): string {
 
 function money(value: string, currency: string): string {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency }).format(Number(value));
+}
+
+function cashFlowLabel(value: string, currency: string): string {
+  const amount = Number(value);
+  if (amount < 0) return `Saída líquida ${money(String(Math.abs(amount)), currency)}`;
+  if (amount > 0) return `Entrada líquida ${money(value, currency)}`;
+  return `Fluxo líquido ${money(value, currency)}`;
 }
 
 function formatDate(value: string): string {

@@ -4,6 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Entrar | Carteira de Investimentos</title>
+    <link rel="icon" href="/static/favicon.ico" sizes="any">
     <link rel="stylesheet" href="/static/vendor/bootstrap/css/bootstrap.min.css">
     <link rel="stylesheet" href="/static/vendor/bootstrap-icons/font/bootstrap-icons.min.css">
     <link rel="stylesheet" href="/static/vendor/sweetalert2/sweetalert2.min.css">
@@ -13,8 +14,11 @@
     <main class="auth-shell container">
       <section class="auth-card card shadow-sm">
         <div class="card-body p-4">
-          <p class="text-uppercase text-primary small mb-1">Carteira de Investimentos</p>
-          <h1 class="h3 mb-3">Entrar</h1>
+          <div class="text-center">
+            <img class="auth-logo" src="/static/img/logo.png" alt="Carteira de Investimentos">
+            <p class="text-uppercase text-primary small mb-1">Carteira de Investimentos</p>
+            <h1 class="h3 mb-3">Entrar</h1>
+          </div>
           <form method="post" action="/login" data-auth-form="/auth/login" novalidate>
             <div class="alert alert-danger" role="alert" tabindex="-1" data-form-status hidden></div>
             <div class="mb-3">
