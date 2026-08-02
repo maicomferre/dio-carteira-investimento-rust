@@ -25,7 +25,8 @@ avaliar, demonstrando o aprendizado em vez de apenas apresentar código.
   sem licença.
 - [x] Incluir modelo de ameaça resumido e limitações honestas, especialmente
   preço manual e mitigação parcial de DDoS.
-- [ ] Adicionar screenshots sem dados/segredos reais e exemplo de API sanitizado.
+- [ ] Adicionar screenshots sem dados/segredos reais.
+- [x] Adicionar exemplo de API sanitizado e roteiro público de evidências.
 - [x] Publicar comandos de teste, cobertura e auditoria com resultados esperados.
 - [x] Escolher licença do projeto e conferir licenças das dependências.
 - [ ] Fazer instalação do zero seguindo apenas o README.

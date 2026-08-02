@@ -150,6 +150,9 @@ npm run audit:container-baseline
 CI executa formatação, lint, testes Rust, testes TypeScript, auditoria pública
 de fronteira e checks de supply chain.
 
+Evidências públicas da entrega, exemplos de API sanitizados e roteiro de
+screenshots ficam em `docs/ENTREGA_DIO_EVIDENCIAS.md`.
+
 ## Melhoria autoral implementada
 
 Além do fluxo básico proposto no desafio, esta versão adiciona:
