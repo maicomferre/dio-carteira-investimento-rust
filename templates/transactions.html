@@ -41,37 +41,44 @@
           <article class="card shadow-sm">
             <div class="card-body">
               <h2 class="h5">Nova movimentação</h2>
-              <form data-transaction-form>
+              <form method="post" action="/api/transactions/buy" data-transaction-form>
+                <div class="alert alert-danger" role="alert" tabindex="-1" data-form-status hidden></div>
                 <div class="mb-3">
                   <label class="form-label" for="transaction-type">Tipo</label>
-                  <select class="form-select" id="transaction-type" name="transaction_type" required>
+                  <select class="form-select" id="transaction-type" name="transaction_type" required aria-describedby="transaction-type-error">
                     <option value="buy">Compra</option>
                     <option value="sell">Venda</option>
                   </select>
+                  <div class="invalid-feedback" id="transaction-type-error" data-error-for="transaction-type" hidden></div>
                 </div>
                 <div class="mb-3">
                   <label class="form-label" for="transaction-asset">Ativo</label>
-                  <select class="form-select" id="transaction-asset" name="asset_id" required data-asset-select></select>
+                  <select class="form-select" id="transaction-asset" name="asset_id" required data-asset-select aria-describedby="transaction-asset-error"></select>
+                  <div class="invalid-feedback" id="transaction-asset-error" data-error-for="transaction-asset" hidden></div>
                 </div>
                 <div class="mb-3">
                   <label class="form-label" for="transaction-broker">Corretora</label>
-                  <select class="form-select" id="transaction-broker" name="broker_id" required data-broker-select></select>
-                  <div class="form-text" data-available-position>Selecione ativo e corretora para ver a posição disponível.</div>
+                  <select class="form-select" id="transaction-broker" name="broker_id" required data-broker-select aria-describedby="transaction-broker-help transaction-broker-error"></select>
+                  <div class="form-text" id="transaction-broker-help" data-available-position>Selecione ativo e corretora para ver a posição disponível.</div>
+                  <div class="invalid-feedback" id="transaction-broker-error" data-error-for="transaction-broker" hidden></div>
                 </div>
                 <div class="row g-2">
                   <div class="col-md-6 mb-3">
                     <label class="form-label" for="transaction-quantity">Quantidade</label>
-                    <input class="form-control" id="transaction-quantity" name="quantity" inputmode="decimal" required placeholder="100">
+                    <input class="form-control" id="transaction-quantity" name="quantity" inputmode="decimal" pattern="[0-9]+([,.][0-9]{1,8})?" required placeholder="100" aria-describedby="transaction-quantity-error">
+                    <div class="invalid-feedback" id="transaction-quantity-error" data-error-for="transaction-quantity" hidden></div>
                   </div>
                   <div class="col-md-6 mb-3">
                     <label class="form-label" for="transaction-price">Preço unitário</label>
-                    <input class="form-control" id="transaction-price" name="unit_price" inputmode="decimal" required placeholder="38.42">
+                    <input class="form-control" id="transaction-price" name="unit_price" inputmode="decimal" pattern="[0-9]+([,.][0-9]{1,8})?" required placeholder="38.42" aria-describedby="transaction-price-error">
+                    <div class="invalid-feedback" id="transaction-price-error" data-error-for="transaction-price" hidden></div>
                   </div>
                 </div>
                 <div class="row g-2">
                   <div class="col-md-6 mb-3">
                     <label class="form-label" for="transaction-fees">Taxas</label>
-                    <input class="form-control" id="transaction-fees" name="fees" inputmode="decimal" placeholder="0">
+                    <input class="form-control" id="transaction-fees" name="fees" inputmode="decimal" pattern="[0-9]+([,.][0-9]{1,8})?" placeholder="0" aria-describedby="transaction-fees-error">
+                    <div class="invalid-feedback" id="transaction-fees-error" data-error-for="transaction-fees" hidden></div>
                   </div>
                   <div class="col-md-6 mb-3">
                     <label class="form-label" for="transaction-date">Data</label>

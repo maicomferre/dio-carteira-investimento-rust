@@ -41,31 +41,35 @@
           <article class="card shadow-sm">
             <div class="card-body">
               <h2 class="h5">Novo ativo</h2>
-              <form data-asset-form>
+              <form method="post" action="/api/assets" data-asset-form>
+                <div class="alert alert-danger" role="alert" tabindex="-1" data-form-status hidden></div>
                 <div class="mb-3">
                   <label class="form-label" for="asset-symbol">Símbolo</label>
-                  <input class="form-control text-uppercase" id="asset-symbol" name="symbol" maxlength="32" required placeholder="PETR4">
-                  <div class="form-text" data-instrument-status>Digite ao menos 2 caracteres para consultar metadados locais.</div>
+                  <input class="form-control text-uppercase" id="asset-symbol" name="symbol" minlength="2" maxlength="32" required placeholder="PETR4" aria-describedby="asset-symbol-help asset-symbol-error">
+                  <div class="form-text" id="asset-symbol-help" data-instrument-status>Digite ao menos 2 caracteres para consultar metadados locais.</div>
+                  <div class="invalid-feedback" id="asset-symbol-error" data-error-for="asset-symbol" hidden></div>
                   <div class="list-group mt-2" data-instrument-suggestions></div>
                 </div>
                 <div class="mb-3">
                   <label class="form-label" for="asset-name">Nome</label>
-                  <input class="form-control" id="asset-name" name="name" maxlength="160" required>
+                  <input class="form-control" id="asset-name" name="name" minlength="2" maxlength="160" required aria-describedby="asset-name-error">
+                  <div class="invalid-feedback" id="asset-name-error" data-error-for="asset-name" hidden></div>
                 </div>
                 <div class="row g-2">
                   <div class="col-md-6 mb-3">
                     <label class="form-label" for="asset-market">Mercado</label>
-                    <select class="form-select" id="asset-market" name="market" required>
+                    <select class="form-select" id="asset-market" name="market" required aria-describedby="asset-market-error">
                       <option value="B3">B3</option>
                       <option value="NASDAQ">NASDAQ</option>
                       <option value="NYSE">NYSE</option>
                       <option value="CRYPTO">CRYPTO</option>
                       <option value="OTHER">OTHER</option>
                     </select>
+                    <div class="invalid-feedback" id="asset-market-error" data-error-for="asset-market" hidden></div>
                   </div>
                   <div class="col-md-6 mb-3">
                     <label class="form-label" for="asset-category">Categoria</label>
-                    <select class="form-select" id="asset-category" name="category" required>
+                    <select class="form-select" id="asset-category" name="category" required aria-describedby="asset-category-error">
                       <option value="STOCK">STOCK</option>
                       <option value="FII">FII</option>
                       <option value="ETF">ETF</option>
@@ -73,19 +77,22 @@
                       <option value="CRYPTO">CRYPTO</option>
                       <option value="OTHER">OTHER</option>
                     </select>
+                    <div class="invalid-feedback" id="asset-category-error" data-error-for="asset-category" hidden></div>
                   </div>
                 </div>
                 <div class="row g-2">
                   <div class="col-md-6 mb-3">
                     <label class="form-label" for="asset-currency">Moeda</label>
-                    <select class="form-select" id="asset-currency" name="currency" required>
+                    <select class="form-select" id="asset-currency" name="currency" required aria-describedby="asset-currency-error">
                       <option value="BRL">BRL</option>
                       <option value="USD">USD</option>
                     </select>
+                    <div class="invalid-feedback" id="asset-currency-error" data-error-for="asset-currency" hidden></div>
                   </div>
                   <div class="col-md-6 mb-3">
                     <label class="form-label" for="asset-price">Preço atual</label>
-                    <input class="form-control" id="asset-price" name="current_price" inputmode="decimal" required placeholder="38.42">
+                    <input class="form-control" id="asset-price" name="current_price" inputmode="decimal" pattern="[0-9]+([,.][0-9]{1,8})?" required placeholder="38.42" aria-describedby="asset-price-error">
+                    <div class="invalid-feedback" id="asset-price-error" data-error-for="asset-price" hidden></div>
                   </div>
                 </div>
                 <div class="d-grid gap-2">

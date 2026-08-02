@@ -2,7 +2,7 @@
 
 - **Status:** em andamento
 - **Criado em:** 2026-07-25
-- **Última atualização:** 2026-07-28
+- **Última atualização:** 2026-08-02
 
 ## Objetivo
 
@@ -33,7 +33,7 @@ TypeScript, mantendo HTML server-rendered e complexidade baixa.
 - [x] Criar layout Askama, parciais e páginas com escaping padrão.
 - [x] Exibir no header um círculo com iniciais derivadas do username, sem upload
   ou URL de avatar.
-- [ ] Implementar formulários acessíveis, labels, foco de erro, navegação por
+- [x] Implementar formulários acessíveis, labels, foco de erro, navegação por
   teclado e contraste; idioma padrão `pt-BR`.
 - [x] Validar no cliente limites e formato para feedback imediato, mantendo a
   mesma validação autoritativa no servidor.
@@ -70,7 +70,7 @@ TypeScript, mantendo HTML server-rendered e complexidade baixa.
 - [ ] Não há recurso remoto obrigatório nem erro no console.
 - [ ] Testes TypeScript cobrem sucesso, timeout, cancelamento e cada classe de
   resposta do cliente HTTP, além do adapter SweetAlert2.
-- [ ] Formulários são utilizáveis por teclado e comunicam erros a leitores de tela.
+- [x] Formulários são utilizáveis por teclado e comunicam erros a leitores de tela.
 - [ ] Gráficos não misturam moedas e não chamam fluxo líquido de lucro.
 - [ ] Gráfico por corretora fica ausente com zero ou uma instituição investida.
 - [ ] Bootstrap substitui integralmente o Tailwind da referência.
@@ -83,3 +83,12 @@ TypeScript, mantendo HTML server-rendered e complexidade baixa.
   auditoria, assets locais e revisão de atualização.
 - **Risco:** um orquestrador HTTP virar framework interno. → **Mitigação:** API
   pequena (`request/get/post/patch`), sem estado global ou regra de domínio.
+
+## Validação executada em 2026-08-02
+
+- Formulários de login, cadastro, corretoras, ativos e movimentações receberam
+  região `role="alert"`, alvo de erro por campo e `aria-describedby`.
+- TypeScript centraliza foco no primeiro campo inválido, limpa estado de erro ao
+  editar e anuncia falhas em região acessível.
+- Teste de template garante presença de alvos acessíveis de erro nos fluxos
+  principais.

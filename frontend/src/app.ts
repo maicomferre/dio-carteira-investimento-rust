@@ -1,5 +1,6 @@
 import { showError, showSuccess } from "./alerts.js";
 import { bootDashboard } from "./dashboard.js";
+import { bindAccessibleValidation, clearFormErrors, ensureFormValidity, showFormError } from "./forms.js";
 import { HttpClient } from "./http.js";
 import { bootPortfolioPages } from "./portfolio-pages.js";
 
@@ -14,6 +15,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 function bindAuthForms(): void {
   document.querySelectorAll<HTMLFormElement>("[data-auth-form]").forEach((form) => {
+    bindAccessibleValidation(form);
     form.addEventListener("submit", (event) => {
       event.preventDefault();
       void submitAuthForm(form);
@@ -25,11 +27,13 @@ async function submitAuthForm(form: HTMLFormElement): Promise<void> {
   const username = form.elements.namedItem("username");
   const password = form.elements.namedItem("password");
   if (!(username instanceof HTMLInputElement) || !(password instanceof HTMLInputElement)) return;
+  if (!ensureFormValidity(form)) return;
 
   const endpoint = form.dataset.authForm;
   if (endpoint !== "/auth/login" && endpoint !== "/auth/register") return;
 
   try {
+    clearFormErrors(form);
     if (endpoint === "/auth/register") {
       await client.post(endpoint, { username: username.value, password: password.value });
       showSuccess("Cadastro criado");
@@ -39,6 +43,7 @@ async function submitAuthForm(form: HTMLFormElement): Promise<void> {
     window.location.assign("/dashboard");
   } catch (error) {
     password.value = "";
+    showFormError(form, ["username", "password"], "Não foi possível autenticar com os dados informados.");
     showError(error);
   }
 }

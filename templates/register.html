@@ -16,15 +16,18 @@
           <p class="text-uppercase text-primary small mb-1">Carteira de Investimentos</p>
           <h1 class="h3 mb-3">Criar cadastro</h1>
           <form method="post" action="/register" data-auth-form="/auth/register" novalidate>
+            <div class="alert alert-danger" role="alert" tabindex="-1" data-form-status hidden></div>
             <div class="mb-3">
               <label class="form-label" for="username">Usuário</label>
-              <input class="form-control" id="username" name="username" autocomplete="username" minlength="3" maxlength="64" required>
-              <div class="form-text">Use letras, números, ponto, hífen ou sublinhado.</div>
+              <input class="form-control" id="username" name="username" autocomplete="username" minlength="3" maxlength="64" required aria-describedby="username-help username-error">
+              <div class="form-text" id="username-help">Use letras, números, ponto, hífen ou sublinhado.</div>
+              <div class="invalid-feedback" id="username-error" data-error-for="username" hidden></div>
             </div>
             <div class="mb-3">
               <label class="form-label" for="password">Senha</label>
-              <input class="form-control" id="password" name="password" type="password" autocomplete="new-password" minlength="12" required>
-              <div class="form-text">Mínimo de 12 caracteres.</div>
+              <input class="form-control" id="password" name="password" type="password" autocomplete="new-password" minlength="12" required aria-describedby="password-help password-error">
+              <div class="form-text" id="password-help">Mínimo de 12 caracteres.</div>
+              <div class="invalid-feedback" id="password-error" data-error-for="password" hidden></div>
             </div>
             <button class="btn btn-primary w-100" type="submit">Cadastrar e entrar</button>
           </form>

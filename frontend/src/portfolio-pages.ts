@@ -1,4 +1,5 @@
 import { confirmAction, showError, showSuccess } from "./alerts.js";
+import { bindAccessibleValidation, clearFormErrors, ensureFormValidity, showFormError } from "./forms.js";
 import { HttpClient } from "./http.js";
 
 interface Broker {
@@ -104,6 +105,7 @@ function bootBrokersPage(): void {
   const form = page.querySelector<HTMLFormElement>("[data-broker-form]");
   const cancel = page.querySelector<HTMLButtonElement>("[data-broker-cancel]");
   if (form !== null) {
+    bindAccessibleValidation(form);
     form.addEventListener("submit", (event) => {
       event.preventDefault();
       void submitBroker(form, page);
@@ -115,10 +117,12 @@ function bootBrokersPage(): void {
 }
 
 async function submitBroker(form: HTMLFormElement, page: HTMLElement): Promise<void> {
+  if (!ensureFormValidity(form)) return;
   const name = inputValue(form, "name");
-  if (name.length < 2) return showErrorMessage("Informe uma corretora válida.");
+  if (name.length < 2) return showValidationError(form, ["name"], "Informe uma corretora válida.");
 
   try {
+    clearFormErrors(form);
     const id = form.dataset.editingId;
     if (id === undefined) {
       await client.post<{ name: string }, Broker>(routes.brokers, { name });
@@ -216,6 +220,7 @@ function bootAssetsPage(): void {
   const cancel = page.querySelector<HTMLButtonElement>("[data-asset-cancel]");
   const symbol = page.querySelector<HTMLInputElement>("#asset-symbol");
   if (form !== null) {
+    bindAccessibleValidation(form);
     form.addEventListener("submit", (event) => {
       event.preventDefault();
       void submitAsset(form, page);
@@ -228,6 +233,7 @@ function bootAssetsPage(): void {
 }
 
 async function submitAsset(form: HTMLFormElement, page: HTMLElement): Promise<void> {
+  if (!ensureFormValidity(form)) return;
   const payload = {
     symbol: inputValue(form, "symbol").toUpperCase(),
     name: inputValue(form, "name"),
@@ -238,10 +244,11 @@ async function submitAsset(form: HTMLFormElement, page: HTMLElement): Promise<vo
   };
 
   if (payload.symbol.length < 2 || payload.name.length < 2 || payload.current_price === null) {
-    return showErrorMessage("Revise símbolo, nome e preço atual.");
+    return showValidationError(form, ["symbol", "name", "current_price"], "Revise símbolo, nome e preço atual.");
   }
 
   try {
+    clearFormErrors(form);
     const id = form.dataset.editingId;
     if (id === undefined) {
       await client.post<typeof payload, Asset>(routes.assets, payload);
@@ -390,6 +397,7 @@ function bootTransactionsPage(): void {
 
   const form = page.querySelector<HTMLFormElement>("[data-transaction-form]");
   if (form !== null) {
+    bindAccessibleValidation(form);
     form.addEventListener("submit", (event) => {
       event.preventDefault();
       void submitTransaction(form, page);
@@ -432,6 +440,7 @@ async function loadBrokerOptions(page: HTMLElement): Promise<Broker[]> {
 }
 
 async function submitTransaction(form: HTMLFormElement, page: HTMLElement): Promise<void> {
+  if (!ensureFormValidity(form)) return;
   const type = inputValue(form, "transaction_type");
   const payload = {
     asset_id: inputValue(form, "asset_id"),
@@ -444,7 +453,7 @@ async function submitTransaction(form: HTMLFormElement, page: HTMLElement): Prom
   const notes = inputValue(form, "notes");
 
   if (payload.asset_id === "" || payload.broker_id === "" || payload.quantity === null || payload.unit_price === null || payload.fees === null) {
-    return showErrorMessage("Revise ativo, corretora, quantidade, preço e taxas.");
+    return showValidationError(form, ["asset_id", "broker_id", "quantity", "unit_price", "fees"], "Revise ativo, corretora, quantidade, preço e taxas.");
   }
 
   const request: {
@@ -466,6 +475,7 @@ async function submitTransaction(form: HTMLFormElement, page: HTMLElement): Prom
   if (notes !== "") request.notes = notes;
 
   try {
+    clearFormErrors(form);
     await client.post<typeof request, Transaction>(type === "sell" ? routes.sellTransaction : routes.buyTransaction, request);
     showSuccess("Movimentação registrada");
     form.reset();
@@ -639,7 +649,8 @@ function shortId(value: string): string {
   return value.slice(0, 8);
 }
 
-function showErrorMessage(message: string): void {
+function showValidationError(form: HTMLFormElement, fieldNames: string[], message: string): void {
+  showFormError(form, fieldNames, message);
   showError({ code: "validation_error", message, status: 400 });
 }
 

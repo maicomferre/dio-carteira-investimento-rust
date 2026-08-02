@@ -1353,7 +1353,7 @@ mod tests {
             std::env::var("DATABASE_URL").unwrap_or_else(|_| DEV_DATABASE_URL.to_owned());
         let pool = PgPoolOptions::new()
             .max_connections(1)
-            .acquire_timeout(Duration::from_millis(500))
+            .acquire_timeout(Duration::from_secs(2))
             .connect_lazy(&database_url)
             .expect("lazy database pool for saturation test");
         let held_connection = pool.acquire().await.expect("hold only database connection");
@@ -1520,6 +1520,46 @@ mod tests {
         assert!(html.contains("alert(2)"));
         assert!(html.contains("&lt;") || html.contains("&#60;"));
         assert!(html.contains("&quot;") || html.contains("&#34;"));
+    }
+
+    #[test]
+    fn form_templates_expose_accessible_error_targets() {
+        fn page_user() -> PageUser {
+            PageUser {
+                username: "maicom".to_owned(),
+                initials: "M".to_owned(),
+            }
+        }
+
+        let templates = [
+            LoginTemplate.render().expect("render login template"),
+            RegisterTemplate.render().expect("render register template"),
+            BrokersTemplate {
+                user: page_user(),
+                csrf_token: "csrf".to_owned(),
+            }
+            .render()
+            .expect("render brokers template"),
+            AssetsTemplate {
+                user: page_user(),
+                csrf_token: "csrf".to_owned(),
+            }
+            .render()
+            .expect("render assets template"),
+            TransactionsTemplate {
+                user: page_user(),
+                csrf_token: "csrf".to_owned(),
+            }
+            .render()
+            .expect("render transactions template"),
+        ];
+
+        for html in templates {
+            assert!(html.contains("data-form-status"));
+            assert!(html.contains("role=\"alert\""));
+            assert!(html.contains("data-error-for="));
+            assert!(html.contains("aria-describedby="));
+        }
     }
 
     #[tokio::test]
