@@ -22,13 +22,10 @@ Sugestão de arquivos:
 Screenshots adicionadas até agora:
 
 - [Login](screenshots/01-login.png)
+- [Dashboard](screenshots/02-dashboard.png)
 - [Corretoras](screenshots/03-corretoras.png)
 - [Ativos](screenshots/04-ativos.png)
-
-Pendentes para completar a evidência visual:
-
-- `docs/screenshots/02-dashboard.png`
-- `docs/screenshots/05-extrato.png`
+- [Extrato](screenshots/05-extrato.png)
 
 ## Massa de dados fictícia
 
