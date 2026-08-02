@@ -196,7 +196,7 @@ O contrato público para Linux/produção está em `specs/07-producao-linux.md`.
 Detalhes reais de VPS, domínio, usuários, paths, chaves, regras de proxy e
 runbooks operacionais não devem ser versionados aqui.
 
-## O que aprendi no desafio
+## O que foi aprendido no desafio
 
 - Como estruturar uma aplicação fullstack Rust com Axum, Askama e SQLx.
 - Como modelar regras financeiras sem `float`.
@@ -207,6 +207,20 @@ runbooks operacionais não devem ser versionados aqui.
   autoridade, banco com invariantes e CI com auditorias.
 - Como preparar um projeto pequeno para futura hospedagem Linux sem expor
   detalhes sensíveis de infraestrutura em um repositório público.
+
+## Uso dos specs no desenvolvimento
+
+O projeto foi evoluído a partir dos documentos em `specs/`, que funcionaram
+como trilha de requisitos e controle de escopo. Primeiro foram definidos domínio,
+ameaças, rotas, telas e decisões técnicas. Depois, cada fase guiou a
+implementação: autenticação, carteira, cálculos, interface, hardening, Docker,
+produção Linux e documentação da entrega.
+
+Esse fluxo ajudou a evitar decisões soltas no código. Mudanças como corretoras,
+extrato por movimentação, cálculo decimal, limites de entrada, separação de
+credenciais do banco, auditoria pública e fronteira privada de VPS foram
+registradas antes ou junto da implementação. Assim, o código atual reflete uma
+evolução planejada, testável e alinhada aos requisitos do desafio.
 
 ## Licença
 
