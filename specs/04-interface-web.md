@@ -68,7 +68,7 @@ TypeScript, mantendo HTML server-rendered e complexidade baixa.
 - [ ] Fluxos essenciais funcionam sem JavaScript.
 - [ ] Conteúdo fornecido por usuário não executa HTML/JavaScript.
 - [ ] Não há recurso remoto obrigatório nem erro no console.
-- [ ] Testes TypeScript cobrem sucesso, timeout, cancelamento e cada classe de
+- [x] Testes TypeScript cobrem sucesso, timeout, cancelamento e cada classe de
   resposta do cliente HTTP, além do adapter SweetAlert2.
 - [x] Formulários são utilizáveis por teclado e comunicam erros a leitores de tela.
 - [ ] Gráficos não misturam moedas e não chamam fluxo líquido de lucro.
@@ -92,3 +92,5 @@ TypeScript, mantendo HTML server-rendered e complexidade baixa.
   editar e anuncia falhas em região acessível.
 - Teste de template garante presença de alvos acessíveis de erro nos fluxos
   principais.
+- Testes TypeScript cobrem `HttpClient` em sucesso, timeout, cancelamento,
+  401/403/422/429/5xx e adapter SweetAlert2 com fallback em live region.
