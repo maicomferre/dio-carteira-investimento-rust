@@ -2,7 +2,7 @@
 
 - **Status:** em implementação
 - **Criado em:** 2026-07-25
-- **Última atualização:** 2026-08-01
+- **Última atualização:** 2026-08-02
 
 ## Objetivo
 
@@ -33,11 +33,19 @@ gateway:
 - expor `GET /health/live` para vida do processo e `GET /health/ready` para
   dependências essenciais;
 - aceitar `X-Request-Id` recebido do proxy ou gerar um identificador próprio;
+- exigir `APP_TRUSTED_PROXY_IPS` fora de desenvolvimento e aceitar
+  `X-Real-IP` somente quando a conexão vier de um desses IPs exatos;
+- exigir que o gateway sobrescreva `X-Real-IP` com o endereço do cliente e
+  remova `X-Forwarded-For`; a aplicação ignora este último;
 - emitir logs estruturados em stdout/stderr, sem tokens, cookies ou segredos;
 - aplicar limites internos de corpo, timeout e rate limit como segunda camada;
 - receber tráfego HTTPS já terminado pelo gateway e usar cookies seguros em
   produção;
 - manter respostas previsíveis para `401`, `403`, `404`, `422`, `429` e `5xx`.
+
+Essa lista é uma allowlist de pares imediatos, não de clientes nem de redes
+CIDR. Ela deve conter apenas o endereço privado pelo qual o gateway realmente
+alcança a aplicação. O endereço concreto permanece na configuração privada.
 
 Arquivos reais de vhost, `limit_req`, bloqueio de probes, Fail2ban, firewall,
 TLS, usuários, paths, SSH, rollback e reload do servidor pertencem ao

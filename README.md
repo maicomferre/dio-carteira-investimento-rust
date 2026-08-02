@@ -181,7 +181,9 @@ Além do fluxo básico proposto no desafio, esta versão adiciona:
 Segurança é requisito primário do projeto. O backend não confia em entrada do
 usuário, usa DTOs com campos conhecidos, queries parametrizadas via SQLx,
 cookies `HttpOnly`, cabeçalhos de segurança, limite de corpo, timeout, limite de
-concorrência e rate limits em memória.
+concorrência e rate limits em memória. Atrás de proxy, somente IPs exatos
+configurados por `APP_TRUSTED_PROXY_IPS` podem definir um único `X-Real-IP`;
+`X-Forwarded-For` é ignorado para evitar spoofing.
 
 Limitações honestas do MVP:
 

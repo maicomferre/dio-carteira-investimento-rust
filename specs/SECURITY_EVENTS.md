@@ -9,8 +9,8 @@ do VPS pertencem à infraestrutura privada e não são versionados aqui.
 ## Campos comuns
 
 - `event`: nome estável do evento.
-- `client_ip`: IP visto pela aplicação. Atrás de proxy, a configuração de IP
-  real/trusted proxy é responsabilidade privada.
+- `client_ip`: IP da conexão TCP ou um único `X-Real-IP` válido recebido de um
+  par listado em `APP_TRUSTED_PROXY_IPS`. `X-Forwarded-For` não é aceito.
 - `path`: rota pública chamada, quando disponível.
 - `correlation_id`: identificador opaco devolvido ao usuário em erro `5xx`.
 - `status` e `code`: status HTTP e código público do erro.

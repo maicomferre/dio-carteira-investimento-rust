@@ -2,7 +2,7 @@
 
 - **Status:** concluída
 - **Criado em:** 2026-07-25
-- **Última atualização:** 2026-07-28
+- **Última atualização:** 2026-08-02
 
 ## Objetivo
 
@@ -74,12 +74,15 @@ estabelecer a fronteira de autorização usada pelo restante do produto.
   `AUTH_EXPIRED_SESSION_RETENTION_DAYS`.
 - CSRF atual usa double-submit cookie + header; quando as telas Askama forem
   criadas, os formulários devem renderizar/enviar o mesmo token.
-- Rate limit atual usa IP real da conexão TCP. Só aceitar `X-Forwarded-For` se
-  houver camada explícita de trusted proxy configurada fora deste repositório.
+- O middleware usa o IP da conexão TCP por padrão. Somente um par listado em
+  `APP_TRUSTED_PROXY_IPS` pode fornecer um único `X-Real-IP` válido;
+  `X-Forwarded-For` é sempre ignorado. Configuração ausente, inválida ou
+  ambígua cai com segurança para o IP do par.
 
 ## Riscos e mitigação
 
-- **Risco:** confiar em `X-Forwarded-For` enviado pelo atacante. →
-  **Mitigação:** só aceitar headers do proxy explicitamente confiável.
+- **Risco:** confiar em cabeçalho de IP enviado pelo atacante. →
+  **Mitigação:** aceitar `X-Real-IP` somente de IP exato explicitamente
+  confiável e sobrescrito pelo gateway; ignorar `X-Forwarded-For`.
 - **Risco:** Argon2 facilitar DoS de login. → **Mitigação:** concorrência
   limitada, rate limit e parâmetros calibrados no servidor alvo.
