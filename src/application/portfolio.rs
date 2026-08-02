@@ -6,9 +6,9 @@ use uuid::Uuid;
 use crate::{
     application::error::AppError,
     domain::portfolio::{
-        AssetCategory, AssetSymbol, BrokerName, Currency, Market, NonNegativeDecimal,
-        PortfolioError, PortfolioSummary, PortfolioTransaction, Quantity, TransactionType,
-        calculate_summary,
+        ASSET_NAME_MAX_CHARS, AssetCategory, AssetSymbol, BrokerName, Currency, Market,
+        NonNegativeDecimal, PortfolioError, PortfolioSummary, PortfolioTransaction, Quantity,
+        TransactionType, calculate_summary,
     },
     infrastructure::portfolio_repository::{
         AssetRecord, BrokerRecord, CreateAssetInput, CreateBrokerInput, CreateTransactionInput,
@@ -323,7 +323,7 @@ pub async fn portfolio_summary(
 fn validate_asset_name(value: String) -> Result<String, AppError> {
     let name = value.trim().to_owned();
 
-    if name.is_empty() || name.len() > 160 {
+    if name.is_empty() || name.chars().count() > ASSET_NAME_MAX_CHARS {
         return Err(AppError::Validation("nome do ativo inválido"));
     }
 
@@ -405,5 +405,26 @@ fn map_portfolio_error(error: PortfolioError) -> AppError {
         PortfolioError::InvalidCategory => AppError::Validation("categoria inválida"),
         PortfolioError::InvalidDecimal => AppError::Validation("valor numérico inválido"),
         PortfolioError::InvalidName => AppError::Validation("nome inválido"),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{application::error::AppError, domain::portfolio::ASSET_NAME_MAX_CHARS};
+
+    use super::validate_asset_name;
+
+    #[test]
+    fn validates_asset_name_limit_by_chars() {
+        let valid = "Á".repeat(ASSET_NAME_MAX_CHARS);
+        let invalid = "A".repeat(ASSET_NAME_MAX_CHARS + 1);
+
+        assert!(
+            matches!(validate_asset_name(valid), Ok(name) if name.chars().count() == ASSET_NAME_MAX_CHARS)
+        );
+        assert!(matches!(
+            validate_asset_name(invalid),
+            Err(AppError::Validation("nome do ativo inválido"))
+        ));
     }
 }

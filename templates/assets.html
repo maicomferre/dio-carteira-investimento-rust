@@ -50,14 +50,15 @@
                 <input id="asset-price" name="current_price" type="hidden" value="0">
                 <div class="mb-3">
                   <label class="form-label" for="asset-symbol">Símbolo</label>
-                  <input class="form-control text-uppercase" id="asset-symbol" name="symbol" minlength="2" maxlength="32" required placeholder="PETR4" aria-describedby="asset-symbol-help asset-symbol-error">
-                  <div class="form-text" id="asset-symbol-help" data-instrument-status>Digite ao menos 2 caracteres para consultar metadados locais.</div>
+                  <input class="form-control text-uppercase" id="asset-symbol" name="symbol" minlength="2" maxlength="20" required placeholder="PETR4" aria-describedby="asset-symbol-help asset-symbol-error">
+                  <div class="form-text" id="asset-symbol-help" data-instrument-status>Digite 2 a 20 caracteres para consultar metadados locais.</div>
                   <div class="invalid-feedback" id="asset-symbol-error" data-error-for="asset-symbol" hidden></div>
                   <div class="list-group mt-2" data-instrument-suggestions></div>
                 </div>
                 <div class="mb-3">
                   <label class="form-label" for="asset-name">Nome</label>
-                  <input class="form-control" id="asset-name" name="name" minlength="2" maxlength="160" required aria-describedby="asset-name-error">
+                  <input class="form-control" id="asset-name" name="name" minlength="2" maxlength="120" required aria-describedby="asset-name-help asset-name-error">
+                  <div class="form-text" id="asset-name-help">Use até 120 caracteres.</div>
                   <div class="invalid-feedback" id="asset-name-error" data-error-for="asset-name" hidden></div>
                 </div>
                 <div class="row g-2">

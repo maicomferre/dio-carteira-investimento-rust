@@ -5,6 +5,10 @@ use thiserror::Error;
 use time::{Date, OffsetDateTime};
 use uuid::Uuid;
 
+pub const ASSET_NAME_MAX_CHARS: usize = 120;
+pub const ASSET_SYMBOL_MAX_CHARS: usize = 20;
+pub const BROKER_NAME_MAX_CHARS: usize = 50;
+
 #[derive(Debug, Error, PartialEq, Eq)]
 pub enum PortfolioError {
     #[error("símbolo inválido")]
@@ -34,7 +38,7 @@ impl BrokerName {
         let display = value.trim().to_owned();
         let normalized = display.to_ascii_lowercase();
 
-        if display.is_empty() || display.len() > 120 {
+        if display.is_empty() || display.chars().count() > BROKER_NAME_MAX_CHARS {
             return Err(PortfolioError::InvalidName);
         }
 
@@ -61,7 +65,7 @@ impl AssetSymbol {
         let normalized = value.trim().to_uppercase();
 
         if normalized.is_empty()
-            || normalized.len() > 32
+            || normalized.len() > ASSET_SYMBOL_MAX_CHARS
             || normalized
                 .chars()
                 .any(|char| !(char.is_ascii_alphanumeric() || matches!(char, '.' | '-' | '_')))
@@ -400,6 +404,16 @@ mod tests {
     }
 
     #[test]
+    fn rejects_asset_symbol_above_limit() {
+        let symbol = "A".repeat(ASSET_SYMBOL_MAX_CHARS + 1);
+
+        assert_eq!(
+            AssetSymbol::parse(&symbol),
+            Err(PortfolioError::InvalidSymbol)
+        );
+    }
+
+    #[test]
     fn rejects_negative_money_and_zero_quantity() {
         assert_eq!(
             NonNegativeDecimal::parse(dec!(-0.01)),
@@ -417,6 +431,13 @@ mod tests {
 
         assert_eq!(name.display(), "Nubank");
         assert_eq!(name.normalized(), "nubank");
+    }
+
+    #[test]
+    fn rejects_broker_name_above_limit() {
+        let name = "a".repeat(BROKER_NAME_MAX_CHARS + 1);
+
+        assert_eq!(BrokerName::parse(&name), Err(PortfolioError::InvalidName));
     }
 
     #[test]
