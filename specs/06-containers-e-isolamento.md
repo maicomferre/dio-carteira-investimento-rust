@@ -90,6 +90,8 @@ comprometimento de host. Ser Rust em vez de Laravel não influencia a decisão.
   npm, shell ou package manager.
 - [x] Criar `.dockerignore` para reduzir contexto e impedir envio acidental de
   arquivos locais, relatórios e materiais privados ao build.
+- [x] Publicar imagem `linux/arm64` pelo CI com tag do commit, digest imutável,
+  SBOM, proveniência e scan de vulnerabilidades altas/críticas.
 - [x] Criar somente Compose de desenvolvimento neutro; o Compose de produção é
   criado e mantido no repositório privado de infraestrutura.
 - [ ] Definir `init`, stop grace, restart policy, CPU, memória, PIDs, rootfs,
@@ -102,7 +104,7 @@ comprometimento de host. Ser Rust em vez de Laravel não influencia a decisão.
     `DATABASE_MIGRATION_URL` para migrations e `DATABASE_URL` para runtime.
   - [ ] Job/container real de migration em produção fica no repositório privado
     de infraestrutura.
-- [ ] Escanear imagem e filesystem com Trivy; gerar SBOM e revisar licenças.
+- [x] Escanear imagem e filesystem com Trivy; gerar SBOM e revisar licenças.
   - [x] Filesystem scan e SBOM público/repetível via
     `npm run audit:supply-chain`.
   - [x] Build e scan da imagem final local via `npm run audit:container`.

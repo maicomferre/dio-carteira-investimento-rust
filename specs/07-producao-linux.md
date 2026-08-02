@@ -77,8 +77,10 @@ logs por serviço, deploy atômico e secrets fora da release.
 - [ ] Executar migration como job separado antes da troca de versão.
   - O contrato público exige credencial separada da aplicação; comando, usuário,
     path e orquestração reais ficam privados.
-- [ ] Fazer deploy por imagem/artefato imutável identificado pelo commit,
-  smoke-test e promoção; rollback troca para a imagem anterior, nunca rebuilda.
+- [x] Gerar fora do servidor imagem ARM64 identificada pelo commit, com digest,
+  SBOM, proveniência e scan no CI.
+- [ ] Promover por digest após smoke-test; rollback troca para o digest anterior,
+  nunca recompila no servidor.
 - [ ] Manter a configuração real de deploy em repositório privado de
   infraestrutura; o público contém apenas exemplos com placeholders.
 - [ ] Não versionar nem mesmo templates de Nginx, Fail2ban, firewall, systemd,
