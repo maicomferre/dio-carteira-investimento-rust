@@ -25,7 +25,8 @@ avaliar, demonstrando o aprendizado em vez de apenas apresentar código.
   sem licença.
 - [x] Incluir modelo de ameaça resumido e limitações honestas, especialmente
   preço manual e mitigação parcial de DDoS.
-- [ ] Adicionar screenshots sem dados/segredos reais.
+- [ ] Adicionar screenshots sem dados/segredos reais. Parcial: login,
+  corretoras e ativos já adicionados; dashboard e extrato ainda pendentes.
 - [x] Adicionar exemplo de API sanitizado e roteiro público de evidências.
 - [x] Publicar comandos de teste, cobertura e auditoria com resultados esperados.
 - [x] Escolher licença do projeto e conferir licenças das dependências.

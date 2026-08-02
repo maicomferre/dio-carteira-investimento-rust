@@ -53,6 +53,7 @@ interface Asset {
   id: string;
   symbol: string;
   name: string;
+  currency: string;
 }
 
 const client = new HttpClient();
@@ -78,6 +79,7 @@ async function loadDashboard(root: HTMLElement): Promise<void> {
     renderCurrencyTabs(root, summary, labels);
     const currency = summary.totals_by_currency[0]?.currency ?? "BRL";
     renderCurrency(root, summary, currency, labels);
+    renderAssetsWithoutPosition(root, assets.assets, summary.positions);
   } catch (error) {
     showError(error);
   }
@@ -208,6 +210,31 @@ function renderCashFlow(root: HTMLElement, flows: DailyCashFlow[]): void {
   );
 }
 
+function renderAssetsWithoutPosition(root: HTMLElement, assets: Asset[], positions: Position[]): void {
+  const section = root.querySelector<HTMLElement>("[data-assets-without-position-section]");
+  const target = root.querySelector<HTMLElement>("[data-assets-without-position]");
+  if (section === null || target === null) return;
+
+  const positionedAssetIds = new Set(positions.map((position) => position.asset_id));
+  const pendingAssets = assets.filter((asset) => !positionedAssetIds.has(asset.id));
+
+  if (pendingAssets.length === 0) {
+    section.hidden = true;
+    target.replaceChildren();
+    return;
+  }
+
+  section.hidden = false;
+  target.replaceChildren(
+    ...pendingAssets.map((asset) => {
+      const item = document.createElement("li");
+      item.className = "list-group-item d-flex justify-content-between align-items-center";
+      item.append(textSpan(`${asset.symbol} — ${asset.name}`), badge(`${asset.currency} · sem compra`));
+      return item;
+    }),
+  );
+}
+
 function svgDonut(items: Array<{ label: string; value: number }>): SVGSVGElement {
   const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
   svg.setAttribute("viewBox", "0 0 42 42");
@@ -273,6 +300,13 @@ function setText(root: HTMLElement, selector: string, value: string): void {
 
 function textSpan(value: string): HTMLSpanElement {
   const span = document.createElement("span");
+  span.textContent = value;
+  return span;
+}
+
+function badge(value: string): HTMLSpanElement {
+  const span = document.createElement("span");
+  span.className = "badge text-bg-light";
   span.textContent = value;
   return span;
 }

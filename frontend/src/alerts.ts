@@ -40,13 +40,15 @@ export function showError(error: unknown): void {
   });
 }
 
-export function showSuccess(message: string): void {
-  show({
+export function showSuccess(message: string, detail?: string): void {
+  const options: Parameters<SweetAlert["fire"]>[0] = {
     title: message,
     icon: "success",
     timer: 1800,
     showConfirmButton: false,
-  });
+  };
+  if (detail !== undefined) options.text = detail;
+  show(options);
 }
 
 export async function confirmAction(message: string): Promise<boolean> {

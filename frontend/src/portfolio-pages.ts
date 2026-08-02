@@ -252,7 +252,7 @@ async function submitAsset(form: HTMLFormElement, page: HTMLElement): Promise<vo
     const id = form.dataset.editingId;
     if (id === undefined) {
       await client.post<typeof payload, Asset>(routes.assets, payload);
-      showSuccess("Ativo cadastrado");
+      showSuccess("Ativo cadastrado", "Para aparecer no dashboard e no extrato, registre uma compra em Movimentações.");
     } else {
       const version = Number(form.dataset.editingVersion ?? "0");
       await client.patch<typeof payload & { version: number }, Asset>(`${routes.assets}/${id}`, {
@@ -420,7 +420,12 @@ async function loadAssetOptions(page: HTMLElement): Promise<Asset[]> {
   const select = page.querySelector<HTMLSelectElement>("[data-asset-select]");
   const { assets } = await client.get<AssetList>(routes.assets);
   if (select !== null) {
-    select.replaceChildren(...assets.map((asset) => option(asset.id, `${asset.symbol} — ${asset.name}`)));
+    select.disabled = assets.length === 0;
+    select.replaceChildren(
+      ...(assets.length === 0
+        ? [option("", "Cadastre um ativo primeiro")]
+        : assets.map((asset) => option(asset.id, `${asset.symbol} — ${asset.name}`))),
+    );
   }
   const filterSelect = page.querySelector<HTMLSelectElement>("[data-filter-asset]");
   if (filterSelect !== null) {
@@ -434,7 +439,12 @@ async function loadBrokerOptions(page: HTMLElement): Promise<Broker[]> {
   const { brokers } = await client.get<BrokerList>(routes.brokers);
   const active = brokers.filter((broker) => !broker.is_archived);
   if (select !== null) {
-    select.replaceChildren(...active.map((broker) => option(broker.id, broker.name)));
+    select.disabled = active.length === 0;
+    select.replaceChildren(
+      ...(active.length === 0
+        ? [option("", "Cadastre uma corretora ativa primeiro")]
+        : active.map((broker) => option(broker.id, broker.name))),
+    );
   }
   return brokers;
 }
@@ -528,7 +538,7 @@ function applyTransactionFilters(): void {
 function renderTransactions(target: HTMLElement | null, transactions: Transaction[], assets: Asset[], brokers: Broker[]): void {
   if (target === null) return;
   if (transactions.length === 0) {
-    target.replaceChildren(rowWithMessage("Nenhuma movimentação encontrada.", 7));
+    target.replaceChildren(rowWithMessage("Nenhuma movimentação encontrada. Cadastre uma compra para o ativo aparecer no dashboard e no extrato.", 7));
     return;
   }
 

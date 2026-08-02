@@ -153,6 +153,12 @@ de fronteira e checks de supply chain.
 Evidências públicas da entrega, exemplos de API sanitizados e roteiro de
 screenshots ficam em `docs/ENTREGA_DIO_EVIDENCIAS.md`.
 
+Screenshots já disponíveis:
+
+- [Login](docs/screenshots/01-login.png)
+- [Corretoras](docs/screenshots/03-corretoras.png)
+- [Ativos](docs/screenshots/04-ativos.png)
+
 ## Melhoria autoral implementada
 
 Além do fluxo básico proposto no desafio, esta versão adiciona:
